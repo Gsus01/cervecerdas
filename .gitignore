@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next
+/out
+
+# tests
+/coverage
+/playwright-report
+/test-results
+
+# local environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# tooling
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
+
+# Drizzle local metadata
+.drizzle

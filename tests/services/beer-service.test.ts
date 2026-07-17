@@ -1,0 +1,78 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const databaseMock = vi.hoisted(() => ({ transaction: vi.fn() }));
+
+vi.mock("@/db", () => ({ db: databaseMock }));
+
+import { addBeerForUser } from "@/lib/services/beer-service";
+
+describe("addBeerForUser", () => {
+  beforeEach(() => {
+    databaseMock.transaction.mockReset();
+  });
+
+  it("incrementa el contador y crea el historial en la misma transacción", async () => {
+    const userId = "4ddde027-2e19-49f6-a213-a93360e8b1fb";
+    const logId = "df32cc9b-bb38-4f40-aee4-953f92795f8c";
+    const set = vi.fn();
+    const where = vi.fn();
+    const returningUser = vi.fn().mockResolvedValue([
+      { id: userId, username: "Carlos", beerCount: 4 },
+    ]);
+    const values = vi.fn();
+    const returningLog = vi.fn().mockResolvedValue([
+      {
+        id: logId,
+        userId,
+        actionType: "BEER_ADDED" as const,
+        quantity: 1,
+        createdAt: new Date("2026-07-17T19:35:00.000Z"),
+      },
+    ]);
+    const transaction = {
+      update: vi.fn(() => ({
+        set: set.mockImplementation(() => ({
+          where: where.mockImplementation(() => ({ returning: returningUser })),
+        })),
+      })),
+      insert: vi.fn(() => ({
+        values: values.mockImplementation(() => ({ returning: returningLog })),
+      })),
+    };
+    databaseMock.transaction.mockImplementation(async (callback) => callback(transaction));
+
+    const result = await addBeerForUser(userId);
+
+    const updateValues = set.mock.calls[0]?.[0] as
+      | { beerCount: unknown; updatedAt: Date }
+      | undefined;
+    const logValues = values.mock.calls[0]?.[0] as
+      | {
+          userId: string;
+          actionType: string;
+          quantity: number;
+          createdAt: Date;
+        }
+      | undefined;
+
+    expect(databaseMock.transaction).toHaveBeenCalledTimes(1);
+    expect(updateValues?.beerCount).toBeDefined();
+    expect(logValues).toMatchObject({
+      userId,
+      actionType: "BEER_ADDED",
+      quantity: 1,
+    });
+    expect(logValues?.createdAt).toBe(updateValues?.updatedAt);
+    expect(result).toEqual({
+      beerCount: 4,
+      log: {
+        id: logId,
+        userId,
+        username: "Carlos",
+        actionType: "BEER_ADDED",
+        quantity: 1,
+        createdAt: "2026-07-17T19:35:00.000Z",
+      },
+    });
+  });
+});
