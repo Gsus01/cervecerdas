@@ -16,10 +16,16 @@ function toUserDto(user: User): UserDto {
     id: user.id,
     username: user.username,
     email: user.email,
+    role: user.role,
     beerCount: user.beerCount,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
+}
+
+export async function getAllUsers(): Promise<UserDto[]> {
+  const rows = await db.select().from(users).orderBy(asc(users.username));
+  return rows.map(toUserDto);
 }
 
 function isUniqueViolation(error: unknown): boolean {

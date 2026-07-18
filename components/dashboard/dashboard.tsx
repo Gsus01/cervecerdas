@@ -1,8 +1,11 @@
 "use client";
 
+import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, ShieldCheck, Tags } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { AdminPanelDialog } from "@/components/admin/admin-panel-dialog";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BeerCounter } from "@/components/dashboard/beer-counter";
 import { BeerTypesDialog } from "@/components/dashboard/beer-types-dialog";
@@ -12,6 +15,8 @@ import {
   addBeer,
   ApiClientError,
   getBeerLogs,
+  getBeerTypes,
+  getCurrentUser,
   getRanking,
 } from "@/lib/http/api-client";
 import type {
@@ -53,6 +58,7 @@ export function Dashboard({
   const [beerTypes, setBeerTypes] = useState(initialBeerTypes);
   const [selectedBeerTypeId, setSelectedBeerTypeId] = useState("");
   const [isBeerTypesOpen, setIsBeerTypesOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -128,10 +134,74 @@ export function Dashboard({
     setToast({ kind: "success", message: `Tipo ${beerType.name} añadido` });
   }
 
+  function handleBeerTypeDeleted(beerTypeId: string) {
+    setBeerTypes((current) => current.filter((beerType) => beerType.id !== beerTypeId));
+    setSelectedBeerTypeId((current) => current === beerTypeId ? "" : current);
+    setToast({ kind: "success", message: "Tipo de bebida eliminado" });
+    void refreshDashboard();
+  }
+
+  async function refreshDashboard() {
+    const [nextUser, nextRanking, nextLogs, nextBeerTypes] = await Promise.all([
+      getCurrentUser(),
+      getRanking(),
+      getBeerLogs(0),
+      getBeerTypes(),
+    ]);
+    setUser(nextUser);
+    setRanking(nextRanking);
+    setLogs(nextLogs);
+    setBeerTypes(nextBeerTypes);
+  }
+
   const currentPosition = ranking.find((entry) => entry.userId === user.id)?.position;
 
   return (
     <div className="min-h-dvh dashboard-background">
+      <header className="safe-top sticky top-0 z-30 border-b border-border/75 bg-background/90 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+          <Brand />
+          <div className="flex items-center gap-2 sm:gap-4">
+            <p className="hidden text-sm text-muted-foreground sm:block">
+              Sesión de <span className="font-bold text-foreground">{user.username}</span>
+            </p>
+            {user.role === "ADMIN" ? (
+              <>
+                <Button
+                  aria-label="Tipos de cerveza"
+                  onClick={() => setIsBeerTypesOpen(true)}
+                  variant="outline"
+                >
+                  <Tags aria-hidden="true" className="size-4" />
+                  <span className="hidden lg:inline">Tipos</span>
+                </Button>
+                <Button
+                  aria-label="Abrir administración"
+                  onClick={() => setIsAdminOpen(true)}
+                  variant="outline"
+                >
+                  <ShieldCheck aria-hidden="true" className="size-4" />
+                  <span className="hidden lg:inline">Administrar</span>
+                </Button>
+              </>
+            ) : null}
+            <Button
+              aria-busy={isSigningOut}
+              disabled={isSigningOut}
+              onClick={() => void handleSignOut()}
+              variant="outline"
+            >
+              {isSigningOut ? (
+                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              ) : (
+                <LogOut aria-hidden="true" className="size-4" />
+              )}
+              <span className="hidden sm:inline">Cerrar sesión</span>
+              <span className="sm:hidden">Salir</span>
+            </Button>
+          </div>
+        </div>
+      </header>
       <AppHeader
         activePage="counter"
         onManageBeerTypes={() => setIsBeerTypesOpen(true)}
@@ -144,6 +214,7 @@ export function Dashboard({
           isAdding={isAdding}
           onAddBeer={() => void handleAddBeer()}
           onBeerTypeChange={setSelectedBeerTypeId}
+          canManageBeerTypes={user.role === "ADMIN"}
           onManageBeerTypes={() => setIsBeerTypesOpen(true)}
           position={currentPosition}
           selectedBeerTypeId={selectedBeerTypeId}
@@ -169,6 +240,14 @@ export function Dashboard({
         isOpen={isBeerTypesOpen}
         onClose={() => setIsBeerTypesOpen(false)}
         onCreated={handleBeerTypeCreated}
+        onDeleted={handleBeerTypeDeleted}
+      />
+
+      <AdminPanelDialog
+        beerTypes={beerTypes}
+        isOpen={isAdminOpen}
+        onChanged={refreshDashboard}
+        onClose={() => setIsAdminOpen(false)}
       />
 
       {toast ? (

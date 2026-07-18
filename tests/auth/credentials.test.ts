@@ -21,6 +21,7 @@ describe("authorizeCredentials", () => {
       username: "Carlos",
       email: "carlos@example.com",
       passwordHash: await hash("cerveza123", 12),
+      role: "USER",
       beerCount: 3,
       createdAt: new Date("2026-07-17T18:00:00Z"),
       updatedAt: new Date("2026-07-17T18:00:00Z"),
@@ -39,6 +40,7 @@ describe("authorizeCredentials", () => {
       id: user.id,
       name: "Carlos",
       email: "carlos@example.com",
+      role: "USER",
     });
   });
 

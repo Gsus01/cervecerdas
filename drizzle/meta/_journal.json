@@ -15,6 +15,13 @@
       "when": 1784369466824,
       "tag": "0001_whole_ezekiel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784395295147,
+      "tag": "0002_wakeful_whiplash",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,12 @@ export class UnauthorizedError extends HttpError {
   }
 }
 
+export class ForbiddenError extends HttpError {
+  constructor(message = "No tienes permisos para realizar esta operación") {
+    super(403, "Forbidden", message);
+  }
+}
+
 export class NotFoundError extends HttpError {
   constructor(message: string) {
     super(404, "Not found", message);

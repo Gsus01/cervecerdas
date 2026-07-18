@@ -21,4 +21,21 @@ export const createBeerTypeSchema = z.object({
     ),
 });
 
+export const beerLogIdSchema = z.string().uuid("El registro no es válido");
+
+export const updateBeerLogSchema = z.object({
+  userId: z.string().uuid("Selecciona un usuario válido"),
+  beerTypeId: z.string().uuid("Selecciona un tipo de bebida válido"),
+  quantity: z.coerce
+    .number()
+    .int("La cantidad debe ser un número entero")
+    .min(1, "La cantidad mínima es 1")
+    .max(1_000, "La cantidad máxima es 1000"),
+  createdAt: z
+    .string()
+    .datetime({ offset: true, message: "La fecha no es válida" }),
+});
+
+export type UpdateBeerLogInput = z.input<typeof updateBeerLogSchema>;
+
 export type CreateBeerTypeInput = z.input<typeof createBeerTypeSchema>;
