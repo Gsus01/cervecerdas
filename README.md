@@ -30,6 +30,7 @@ No se utiliza Java. Next.js sirve tanto la interfaz como los endpoints, por lo q
 - Rutas privadas con redirección al login.
 - Registro transaccional de una cerveza para el usuario de la sesión.
 - Catálogo compartido de tipos de cerveza con nombre y foto.
+- Rol de administrador con gestión de registros, cantidades, usuarios asociados y tipos.
 - Selección obligatoria del tipo al registrar una cerveza.
 - Incremento atómico del contador y evento `BEER_ADDED` en la misma transacción.
 - Protección frente a dobles pulsaciones mientras una petición está en curso.
@@ -151,6 +152,16 @@ npm run db:generate   # genera una migración después de cambiar db/schema.ts
 npm run db:studio     # abre el explorador local de Drizzle
 ```
 
+### Crear el primer administrador
+
+Después de aplicar las migraciones, crea una cuenta administrativa con:
+
+```bash
+npm run admin:create -- --username admin --email admin@example.com --password 'una-clave-segura'
+```
+
+Si ya existe una cuenta con ese correo, el comando conserva su nombre e historial, actualiza la contraseña indicada y la convierte en administradora. No hay ninguna contraseña administrativa predeterminada.
+
 ## API
 
 | Método | Ruta | Sesión | Descripción |
@@ -160,9 +171,12 @@ npm run db:studio     # abre el explorador local de Drizzle
 | `GET` | `/api/users/me` | Sí | Devuelve el perfil actual |
 | `GET` | `/api/users/ranking` | Sí | Devuelve la clasificación |
 | `GET` | `/api/beer-types` | Sí | Devuelve los tipos de cerveza |
-| `POST` | `/api/beer-types` | Sí | Añade un tipo con nombre y foto |
+| `POST` | `/api/beer-types` | Admin | Añade un tipo con nombre y foto |
+| `DELETE` | `/api/beer-types/:id` | Admin | Elimina un tipo conservando el historial |
 | `POST` | `/api/beers` | Sí | Añade una cerveza al usuario de la sesión |
 | `GET` | `/api/beers/logs?page=0&size=20` | Sí | Devuelve el historial paginado |
+| `GET` | `/api/admin/overview` | Admin | Devuelve usuarios y registros administrables |
+| `PATCH/DELETE` | `/api/admin/logs/:id` | Admin | Corrige o elimina un registro y recalcula totales |
 | `GET` | `/api/health` | No | Healthcheck del proceso web |
 | `GET` | `/api/openapi` | No | Especificación OpenAPI 3.1 |
 

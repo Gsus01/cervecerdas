@@ -14,6 +14,7 @@ interface BeerCounterProps {
   selectedBeerTypeId: string;
   onBeerTypeChange: (beerTypeId: string) => void;
   onManageBeerTypes: () => void;
+  canManageBeerTypes: boolean;
 }
 
 export function BeerCounter({
@@ -25,6 +26,7 @@ export function BeerCounter({
   selectedBeerTypeId,
   onBeerTypeChange,
   onManageBeerTypes,
+  canManageBeerTypes,
 }: BeerCounterProps) {
   const selectedBeerType = beerTypes.find(
     (beerType) => beerType.id === selectedBeerTypeId,
@@ -100,7 +102,7 @@ export function BeerCounter({
                   ))}
                 </select>
               </div>
-              {beerTypes.length === 0 ? (
+              {beerTypes.length === 0 && canManageBeerTypes ? (
                 <button
                   className="min-h-11 text-left text-sm font-bold text-accent underline decoration-accent/50 underline-offset-4 hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   onClick={onManageBeerTypes}
@@ -108,6 +110,10 @@ export function BeerCounter({
                 >
                   Añade un tipo para poder registrar
                 </button>
+              ) : beerTypes.length === 0 ? (
+                <p className="min-h-11 pt-2 text-sm font-bold text-white/70">
+                  Un administrador debe añadir un tipo de bebida.
+                </p>
               ) : null}
             </div>
             <Button

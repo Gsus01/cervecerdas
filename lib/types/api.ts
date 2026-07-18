@@ -2,9 +2,22 @@ export interface UserDto {
   id: string;
   username: string;
   email: string;
+  role: "USER" | "ADMIN";
   beerCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AdminOverviewDto {
+  users: UserDto[];
+  logs: PageDto<BeerLogDto>;
+}
+
+export interface UpdateBeerLogInput {
+  userId: string;
+  beerTypeId: string;
+  quantity: number;
+  createdAt: string;
 }
 
 export interface RankingEntryDto {

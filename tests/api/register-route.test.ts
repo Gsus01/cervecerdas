@@ -22,6 +22,7 @@ const createdUser: UserDto = {
   id: "4ddde027-2e19-49f6-a213-a93360e8b1fb",
   username: "Carlos",
   email: "carlos@example.com",
+  role: "USER",
   beerCount: 0,
   createdAt: "2026-07-17T18:00:00.000Z",
   updatedAt: "2026-07-17T18:00:00.000Z",

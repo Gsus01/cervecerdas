@@ -76,7 +76,7 @@ export function ActivityFeed({
                 </span>
                 <div className="min-w-0 pt-0.5">
                   <p className="text-sm leading-5">
-                    <span className="font-bold">{log.username}</span> registró una cerveza
+                    <span className="font-bold">{log.username}</span> registró {log.quantity} {log.quantity === 1 ? "bebida" : "bebidas"}
                     {log.beerType ? (
                       <span className="font-bold"> · {log.beerType.name}</span>
                     ) : null}

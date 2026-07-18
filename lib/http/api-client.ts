@@ -2,12 +2,14 @@
 
 import type {
   ApiErrorDto,
+  AdminOverviewDto,
   BeerAddedDto,
   BeerLogDto,
   BeerTypeDto,
   PageDto,
   RankingEntryDto,
   UserDto,
+  UpdateBeerLogInput,
 } from "@/lib/types/api";
 import type { RegistrationInput } from "@/lib/validation/auth";
 
@@ -126,4 +128,30 @@ export function createBeerType(
 
 export function getBeerLogs(page = 0, size = 20): Promise<PageDto<BeerLogDto>> {
   return request<PageDto<BeerLogDto>>(`/api/beers/logs?page=${page}&size=${size}`);
+}
+
+export function deleteBeerType(beerTypeId: string): Promise<{ success: true }> {
+  return request<{ success: true }>(`/api/beer-types/${beerTypeId}`, {
+    method: "DELETE",
+  });
+}
+
+export function getAdminOverview(page = 0, size = 20): Promise<AdminOverviewDto> {
+  return request<AdminOverviewDto>(`/api/admin/overview?page=${page}&size=${size}`);
+}
+
+export function updateAdminBeerLog(
+  logId: string,
+  input: UpdateBeerLogInput,
+): Promise<{ success: true }> {
+  return request<{ success: true }>(`/api/admin/logs/${logId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteAdminBeerLog(logId: string): Promise<{ success: true }> {
+  return request<{ success: true }>(`/api/admin/logs/${logId}`, {
+    method: "DELETE",
+  });
 }

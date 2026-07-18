@@ -1,10 +1,10 @@
 import "server-only";
 
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { beerTypes, type BeerType } from "@/db/schema";
-import { ConflictError } from "@/lib/http/errors";
+import { ConflictError, NotFoundError } from "@/lib/http/errors";
 import type { BeerTypeDto } from "@/lib/types/api";
 import { createBeerTypeSchema } from "@/lib/validation/beer";
 
@@ -47,5 +47,16 @@ export async function createBeerType(input: unknown): Promise<BeerTypeDto> {
       throw new ConflictError("Ya existe un tipo de cerveza con ese nombre");
     }
     throw error;
+  }
+}
+
+export async function deleteBeerType(beerTypeId: string): Promise<void> {
+  const [deletedBeerType] = await db
+    .delete(beerTypes)
+    .where(eq(beerTypes.id, beerTypeId))
+    .returning({ id: beerTypes.id });
+
+  if (!deletedBeerType) {
+    throw new NotFoundError("El tipo de bebida ya no existe");
   }
 }

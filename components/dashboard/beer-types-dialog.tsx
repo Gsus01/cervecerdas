@@ -1,13 +1,13 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, Plus, X } from "lucide-react";
+import { ImagePlus, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ApiClientError, createBeerType } from "@/lib/http/api-client";
+import { ApiClientError, createBeerType, deleteBeerType } from "@/lib/http/api-client";
 import type { BeerTypeDto } from "@/lib/types/api";
 import { MAX_BEER_TYPE_PHOTO_BYTES } from "@/lib/validation/beer";
 
@@ -16,6 +16,7 @@ interface BeerTypesDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (beerType: BeerTypeDto) => void;
+  onDeleted: (beerTypeId: string) => void;
 }
 
 const acceptedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -31,6 +32,7 @@ export function BeerTypesDialog({
   isOpen,
   onClose,
   onCreated,
+  onDeleted,
 }: BeerTypesDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -40,6 +42,7 @@ export function BeerTypesDialog({
   const [photoError, setPhotoError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
 
   useEffect(() => {
     if (!isOpen) {
@@ -160,6 +163,23 @@ export function BeerTypesDialog({
       setSubmitError(messageFromError(error));
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleDelete(beerType: BeerTypeDto) {
+    if (!window.confirm(`¿Eliminar el tipo “${beerType.name}”? Los registros conservarán la cantidad, pero mostrarán “tipo eliminado”.`)) {
+      return;
+    }
+
+    setDeletingId(beerType.id);
+    setSubmitError("");
+    try {
+      await deleteBeerType(beerType.id);
+      onDeleted(beerType.id);
+    } catch (error) {
+      setSubmitError(messageFromError(error));
+    } finally {
+      setDeletingId("");
     }
   }
 
@@ -310,7 +330,20 @@ export function BeerTypesDialog({
                         unoptimized
                       />
                     </span>
-                    <span className="min-w-0 break-words text-sm font-bold">{beerType.name}</span>
+                    <span className="min-w-0 flex-1 break-words text-sm font-bold">{beerType.name}</span>
+                    <Button
+                      aria-label={`Eliminar tipo ${beerType.name}`}
+                      disabled={Boolean(deletingId) || isSaving}
+                      onClick={() => void handleDelete(beerType)}
+                      size="sm"
+                      variant="destructive"
+                    >
+                      {deletingId === beerType.id ? (
+                        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                      ) : (
+                        <Trash2 aria-hidden="true" className="size-4" />
+                      )}
+                    </Button>
                   </li>
                 ))}
               </ul>

@@ -1,4 +1,4 @@
-import { getCurrentUserId } from "@/lib/auth/session";
+import { getCurrentUserId, requireAdmin } from "@/lib/auth/session";
 import { readJson, withErrorHandling } from "@/lib/http/errors";
 import { createBeerType, getBeerTypes } from "@/lib/services/beer-type-service";
 
@@ -8,7 +8,7 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (request) => {
-  await getCurrentUserId();
+  await requireAdmin();
   const result = await createBeerType(await readJson(request));
   return Response.json(result, { status: 201 });
 });

@@ -2,7 +2,7 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "Cervecerdas API",
-    version: "0.1.0",
+    version: "0.2.0",
     description:
       "API del MVP Cervecerdas. La autenticación usa una cookie de sesión JWT gestionada por Auth.js.",
   },
@@ -12,6 +12,7 @@ export const openApiDocument = {
     { name: "Users" },
     { name: "Beers" },
     { name: "Beer types" },
+    { name: "Admin" },
     { name: "System" },
   ],
   paths: {
@@ -120,7 +121,7 @@ export const openApiDocument = {
       },
       post: {
         tags: ["Beer types"],
-        summary: "Añadir un tipo de cerveza",
+        summary: "Añadir un tipo de cerveza (administrador)",
         requestBody: {
           required: true,
           content: {
@@ -138,7 +139,59 @@ export const openApiDocument = {
           },
           "400": { $ref: "#/components/responses/BadRequest" },
           "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
           "409": { $ref: "#/components/responses/Conflict" },
+        },
+      },
+    },
+    "/api/beer-types/{id}": {
+      delete: {
+        tags: ["Beer types"],
+        summary: "Eliminar un tipo de bebida (administrador)",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "200": { description: "Tipo eliminado; sus registros conservan la cantidad" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "404": { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/api/admin/overview": {
+      get: {
+        tags: ["Admin"],
+        summary: "Consultar usuarios y registros administrables",
+        responses: {
+          "200": { description: "Resumen administrativo" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+    },
+    "/api/admin/logs/{id}": {
+      patch: {
+        tags: ["Admin"],
+        summary: "Cambiar usuario, bebida, cantidad o fecha de un registro",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/UpdateBeerLogRequest" } } },
+        },
+        responses: {
+          "200": { description: "Registro y contadores actualizados" },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "404": { $ref: "#/components/responses/NotFound" },
+        },
+      },
+      delete: {
+        tags: ["Admin"],
+        summary: "Eliminar un registro y recalcular el contador",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "200": { description: "Registro eliminado" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "404": { $ref: "#/components/responses/NotFound" },
         },
       },
     },
@@ -191,11 +244,12 @@ export const openApiDocument = {
       },
       User: {
         type: "object",
-        required: ["id", "username", "email", "beerCount", "createdAt", "updatedAt"],
+        required: ["id", "username", "email", "role", "beerCount", "createdAt", "updatedAt"],
         properties: {
           id: { type: "string", format: "uuid" },
           username: { type: "string" },
           email: { type: "string", format: "email" },
+          role: { type: "string", enum: ["USER", "ADMIN"] },
           beerCount: { type: "integer", minimum: 0 },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -227,7 +281,7 @@ export const openApiDocument = {
           userId: { type: "string", format: "uuid" },
           username: { type: "string" },
           actionType: { type: "string", enum: ["BEER_ADDED"] },
-          quantity: { type: "integer", const: 1 },
+          quantity: { type: "integer", minimum: 1, maximum: 1000 },
           beerType: {
             anyOf: [
               { $ref: "#/components/schemas/BeerType" },
@@ -242,6 +296,16 @@ export const openApiDocument = {
         required: ["beerTypeId"],
         properties: {
           beerTypeId: { type: "string", format: "uuid" },
+        },
+      },
+      UpdateBeerLogRequest: {
+        type: "object",
+        required: ["userId", "beerTypeId", "quantity", "createdAt"],
+        properties: {
+          userId: { type: "string", format: "uuid" },
+          beerTypeId: { type: "string", format: "uuid" },
+          quantity: { type: "integer", minimum: 1, maximum: 1000 },
+          createdAt: { type: "string", format: "date-time" },
         },
       },
       BeerType: {
@@ -312,6 +376,18 @@ export const openApiDocument = {
       },
       Unauthorized: {
         description: "Sesión no válida",
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
+        },
+      },
+      Forbidden: {
+        description: "La cuenta no tiene permisos de administrador",
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
+        },
+      },
+      NotFound: {
+        description: "El recurso no existe",
         content: {
           "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
         },

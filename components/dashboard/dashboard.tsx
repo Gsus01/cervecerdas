@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, Tags } from "lucide-react";
+import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, ShieldCheck, Tags } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
+import { AdminPanelDialog } from "@/components/admin/admin-panel-dialog";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BeerCounter } from "@/components/dashboard/beer-counter";
 import { BeerTypesDialog } from "@/components/dashboard/beer-types-dialog";
@@ -14,6 +15,8 @@ import {
   addBeer,
   ApiClientError,
   getBeerLogs,
+  getBeerTypes,
+  getCurrentUser,
   getRanking,
 } from "@/lib/http/api-client";
 import type {
@@ -55,6 +58,7 @@ export function Dashboard({
   const [beerTypes, setBeerTypes] = useState(initialBeerTypes);
   const [selectedBeerTypeId, setSelectedBeerTypeId] = useState("");
   const [isBeerTypesOpen, setIsBeerTypesOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -136,6 +140,26 @@ export function Dashboard({
     setToast({ kind: "success", message: `Tipo ${beerType.name} añadido` });
   }
 
+  function handleBeerTypeDeleted(beerTypeId: string) {
+    setBeerTypes((current) => current.filter((beerType) => beerType.id !== beerTypeId));
+    setSelectedBeerTypeId((current) => current === beerTypeId ? "" : current);
+    setToast({ kind: "success", message: "Tipo de bebida eliminado" });
+    void refreshDashboard();
+  }
+
+  async function refreshDashboard() {
+    const [nextUser, nextRanking, nextLogs, nextBeerTypes] = await Promise.all([
+      getCurrentUser(),
+      getRanking(),
+      getBeerLogs(0),
+      getBeerTypes(),
+    ]);
+    setUser(nextUser);
+    setRanking(nextRanking);
+    setLogs(nextLogs);
+    setBeerTypes(nextBeerTypes);
+  }
+
   const currentPosition = ranking.find((entry) => entry.userId === user.id)?.position;
 
   return (
@@ -147,15 +171,26 @@ export function Dashboard({
             <p className="hidden text-sm text-muted-foreground sm:block">
               Sesión de <span className="font-bold text-foreground">{user.username}</span>
             </p>
-            <Button
-              aria-label="Tipos de cerveza"
-              onClick={() => setIsBeerTypesOpen(true)}
-              variant="outline"
-            >
-              <Tags aria-hidden="true" className="size-4" />
-              <span className="hidden min-[480px]:inline">Tipos de cerveza</span>
-              <span className="min-[480px]:hidden">Tipos</span>
-            </Button>
+            {user.role === "ADMIN" ? (
+              <>
+                <Button
+                  aria-label="Tipos de cerveza"
+                  onClick={() => setIsBeerTypesOpen(true)}
+                  variant="outline"
+                >
+                  <Tags aria-hidden="true" className="size-4" />
+                  <span className="hidden lg:inline">Tipos</span>
+                </Button>
+                <Button
+                  aria-label="Abrir administración"
+                  onClick={() => setIsAdminOpen(true)}
+                  variant="outline"
+                >
+                  <ShieldCheck aria-hidden="true" className="size-4" />
+                  <span className="hidden lg:inline">Administrar</span>
+                </Button>
+              </>
+            ) : null}
             <Button
               aria-busy={isSigningOut}
               disabled={isSigningOut}
@@ -180,6 +215,7 @@ export function Dashboard({
           isAdding={isAdding}
           onAddBeer={() => void handleAddBeer()}
           onBeerTypeChange={setSelectedBeerTypeId}
+          canManageBeerTypes={user.role === "ADMIN"}
           onManageBeerTypes={() => setIsBeerTypesOpen(true)}
           position={currentPosition}
           selectedBeerTypeId={selectedBeerTypeId}
@@ -205,6 +241,14 @@ export function Dashboard({
         isOpen={isBeerTypesOpen}
         onClose={() => setIsBeerTypesOpen(false)}
         onCreated={handleBeerTypeCreated}
+        onDeleted={handleBeerTypeDeleted}
+      />
+
+      <AdminPanelDialog
+        beerTypes={beerTypes}
+        isOpen={isAdminOpen}
+        onChanged={refreshDashboard}
+        onClose={() => setIsAdminOpen(false)}
       />
 
       {toast ? (

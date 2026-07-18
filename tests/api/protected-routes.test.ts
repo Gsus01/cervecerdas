@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth/session", () => ({
   getCurrentUserId: vi.fn(),
+  requireAdmin: vi.fn(),
 }));
 vi.mock("@/lib/services/beer-service", () => ({
   addBeerForUser: vi.fn(),
@@ -22,7 +23,7 @@ import {
   POST as createBeerTypeRoute,
 } from "@/app/api/beer-types/route";
 import { GET as rankingRoute } from "@/app/api/users/ranking/route";
-import { getCurrentUserId } from "@/lib/auth/session";
+import { getCurrentUserId, requireAdmin } from "@/lib/auth/session";
 import { UnauthorizedError } from "@/lib/http/errors";
 import { addBeerForUser } from "@/lib/services/beer-service";
 import { createBeerType, getBeerTypes } from "@/lib/services/beer-type-service";
@@ -30,6 +31,7 @@ import { getRanking } from "@/lib/services/user-service";
 import type { BeerAddedDto, BeerTypeDto, RankingEntryDto } from "@/lib/types/api";
 
 const getCurrentUserIdMock = vi.mocked(getCurrentUserId);
+const requireAdminMock = vi.mocked(requireAdmin);
 const addBeerForUserMock = vi.mocked(addBeerForUser);
 const createBeerTypeMock = vi.mocked(createBeerType);
 const getBeerTypesMock = vi.mocked(getBeerTypes);
@@ -40,6 +42,7 @@ const beerTypeId = "bf0dc4e4-1797-4ef8-9149-fe74d2ac1642";
 describe("rutas protegidas", () => {
   beforeEach(() => {
     getCurrentUserIdMock.mockReset();
+    requireAdminMock.mockReset();
     addBeerForUserMock.mockReset();
     createBeerTypeMock.mockReset();
     getBeerTypesMock.mockReset();
@@ -141,7 +144,7 @@ describe("rutas protegidas", () => {
       ...input,
       createdAt: "2026-07-17T18:30:00.000Z",
     };
-    getCurrentUserIdMock.mockResolvedValue(userId);
+    requireAdminMock.mockResolvedValue(userId);
     createBeerTypeMock.mockResolvedValue(created);
 
     const response = await createBeerTypeRoute(

@@ -20,6 +20,7 @@ const citext = customType<{ data: string }>({
 });
 
 export const beerActionType = pgEnum("beer_action_type", ["BEER_ADDED"]);
+export const userRole = pgEnum("user_role", ["USER", "ADMIN"]);
 
 export const beerTypes = pgTable(
   "beer_types",
@@ -48,6 +49,7 @@ export const users = pgTable(
     username: citext("username").notNull(),
     email: citext("email").notNull(),
     passwordHash: varchar("password_hash", { length: 60 }).notNull(),
+    role: userRole("role").default("USER").notNull(),
     beerCount: integer("beer_count").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .defaultNow()
@@ -73,7 +75,7 @@ export const beerLogs = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     beerTypeId: uuid("beer_type_id").references(() => beerTypes.id, {
-      onDelete: "restrict",
+      onDelete: "set null",
     }),
     actionType: beerActionType("action_type").notNull(),
     quantity: integer("quantity").notNull(),

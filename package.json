@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "admin:create": "node scripts/create-admin.mjs"
   },
   "dependencies": {
     "bcryptjs": "3.0.3",
