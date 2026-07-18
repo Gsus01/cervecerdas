@@ -1,4 +1,5 @@
 import { Beer, ChevronLeft, ChevronRight, History } from "lucide-react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,12 +60,26 @@ export function ActivityFeed({
           <ol className="divide-y divide-border">
             {logs.content.map((log) => (
               <li className="flex gap-3 py-3.5 first:pt-0" key={log.id}>
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent/30 text-primary">
-                  <Beer aria-hidden="true" className="size-4" />
+                <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-accent/30 text-primary">
+                  {log.beerType ? (
+                    <Image
+                      alt=""
+                      className="object-cover"
+                      fill
+                      sizes="40px"
+                      src={log.beerType.photoDataUrl}
+                      unoptimized
+                    />
+                  ) : (
+                    <Beer aria-hidden="true" className="size-4" />
+                  )}
                 </span>
                 <div className="min-w-0 pt-0.5">
                   <p className="text-sm leading-5">
                     <span className="font-bold">{log.username}</span> registró una cerveza
+                    {log.beerType ? (
+                      <span className="font-bold"> · {log.beerType.name}</span>
+                    ) : null}
                   </p>
                   <time
                     className="mt-1 block text-xs font-medium text-muted-foreground"

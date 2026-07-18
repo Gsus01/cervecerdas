@@ -4,6 +4,7 @@ import type {
   ApiErrorDto,
   BeerAddedDto,
   BeerLogDto,
+  BeerTypeDto,
   PageDto,
   RankingEntryDto,
   UserDto,
@@ -102,8 +103,25 @@ export function getRanking(): Promise<RankingEntryDto[]> {
   return request<RankingEntryDto[]>("/api/users/ranking");
 }
 
-export function addBeer(): Promise<BeerAddedDto> {
-  return request<BeerAddedDto>("/api/beers", { method: "POST" });
+export function addBeer(beerTypeId: string): Promise<BeerAddedDto> {
+  return request<BeerAddedDto>("/api/beers", {
+    method: "POST",
+    body: JSON.stringify({ beerTypeId }),
+  });
+}
+
+export function getBeerTypes(): Promise<BeerTypeDto[]> {
+  return request<BeerTypeDto[]>("/api/beer-types");
+}
+
+export function createBeerType(
+  name: string,
+  photoDataUrl: string,
+): Promise<BeerTypeDto> {
+  return request<BeerTypeDto>("/api/beer-types", {
+    method: "POST",
+    body: JSON.stringify({ name, photoDataUrl }),
+  });
 }
 
 export function getBeerLogs(page = 0, size = 20): Promise<PageDto<BeerLogDto>> {

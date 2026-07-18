@@ -14,12 +14,20 @@ export interface RankingEntryDto {
   beerCount: number;
 }
 
+export interface BeerTypeDto {
+  id: string;
+  name: string;
+  photoDataUrl: string;
+  createdAt: string;
+}
+
 export interface BeerLogDto {
   id: string;
   userId: string;
   username: string;
   actionType: "BEER_ADDED";
   quantity: number;
+  beerType: BeerTypeDto | null;
   createdAt: string;
 }
 

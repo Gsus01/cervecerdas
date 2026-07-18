@@ -29,6 +29,8 @@ No se utiliza Java. Next.js sirve tanto la interfaz como los endpoints, por lo q
 - Login y logout mediante Auth.js.
 - Rutas privadas con redirección al login.
 - Registro transaccional de una cerveza para el usuario de la sesión.
+- Catálogo compartido de tipos de cerveza con nombre y foto.
+- Selección obligatoria del tipo al registrar una cerveza.
 - Incremento atómico del contador y evento `BEER_ADDED` en la misma transacción.
 - Protección frente a dobles pulsaciones mientras una petición está en curso.
 - Historial en UTC, ordenado de más reciente a más antiguo y paginado.
@@ -157,6 +159,8 @@ npm run db:studio     # abre el explorador local de Drizzle
 | `GET/POST` | `/api/auth/*` | No | Endpoints internos de Auth.js |
 | `GET` | `/api/users/me` | Sí | Devuelve el perfil actual |
 | `GET` | `/api/users/ranking` | Sí | Devuelve la clasificación |
+| `GET` | `/api/beer-types` | Sí | Devuelve los tipos de cerveza |
+| `POST` | `/api/beer-types` | Sí | Añade un tipo con nombre y foto |
 | `POST` | `/api/beers` | Sí | Añade una cerveza al usuario de la sesión |
 | `GET` | `/api/beers/logs?page=0&size=20` | Sí | Devuelve el historial paginado |
 | `GET` | `/api/health` | No | Healthcheck del proceso web |
@@ -181,7 +185,7 @@ Los errores propios de la API tienen una forma consistente:
 
 ## Modelo de datos
 
-`users` contiene UUID, usuario `citext`, correo `citext`, hash BCrypt, contador y fechas de creación/actualización. `beer_logs` contiene UUID, usuario, acción, cantidad y fecha.
+`users` contiene UUID, usuario `citext`, correo `citext`, hash BCrypt, contador y fechas de creación/actualización. `beer_types` guarda un nombre único y una foto JPG, PNG o WebP de hasta 1 MB. `beer_logs` contiene UUID, usuario, tipo de cerveza, acción, cantidad y fecha; la relación con el tipo admite `null` únicamente para conservar registros anteriores a esta funcionalidad.
 
 La migración impone en PostgreSQL:
 
@@ -190,7 +194,8 @@ La migración impone en PostgreSQL:
 - `beer_count >= 0`.
 - `quantity > 0`.
 - Clave foránea del evento al usuario.
-- Índices para ranking, historial y relación por usuario.
+- Clave foránea opcional del evento al tipo de cerveza.
+- Índices para ranking, historial y relaciones por usuario y tipo.
 
 ## Seguridad y decisiones técnicas
 
@@ -233,7 +238,7 @@ docker compose up -d --build
 npm run test:e2e
 ```
 
-La suite E2E crea un usuario único, inicia sesión, registra una cerveza y comprueba contador e historial tanto en escritorio como en viewport móvil.
+La suite E2E crea un usuario único, inicia sesión, añade un tipo de cerveza, registra una cerveza de ese tipo y comprueba contador e historial tanto en escritorio como en viewport móvil.
 
 ## Datos de demostración
 
