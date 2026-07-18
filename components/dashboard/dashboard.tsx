@@ -1,7 +1,5 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, ShieldCheck, Tags } from "lucide-react";
-import { signOut } from "next-auth/react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -158,53 +156,10 @@ export function Dashboard({
 
   return (
     <div className="min-h-dvh dashboard-background">
-      <header className="safe-top sticky top-0 z-30 border-b border-border/75 bg-background/90 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
-          <Brand />
-          <div className="flex items-center gap-2 sm:gap-4">
-            <p className="hidden text-sm text-muted-foreground sm:block">
-              Sesión de <span className="font-bold text-foreground">{user.username}</span>
-            </p>
-            {user.role === "ADMIN" ? (
-              <>
-                <Button
-                  aria-label="Tipos de cerveza"
-                  onClick={() => setIsBeerTypesOpen(true)}
-                  variant="outline"
-                >
-                  <Tags aria-hidden="true" className="size-4" />
-                  <span className="hidden lg:inline">Tipos</span>
-                </Button>
-                <Button
-                  aria-label="Abrir administración"
-                  onClick={() => setIsAdminOpen(true)}
-                  variant="outline"
-                >
-                  <ShieldCheck aria-hidden="true" className="size-4" />
-                  <span className="hidden lg:inline">Administrar</span>
-                </Button>
-              </>
-            ) : null}
-            <Button
-              aria-busy={isSigningOut}
-              disabled={isSigningOut}
-              onClick={() => void handleSignOut()}
-              variant="outline"
-            >
-              {isSigningOut ? (
-                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-              ) : (
-                <LogOut aria-hidden="true" className="size-4" />
-              )}
-              <span className="hidden sm:inline">Cerrar sesión</span>
-              <span className="sm:hidden">Salir</span>
-            </Button>
-          </div>
-        </div>
-      </header>
       <AppHeader
         activePage="counter"
-        onManageBeerTypes={() => setIsBeerTypesOpen(true)}
+        onManageBeerTypes={user.role === "ADMIN" ? () => setIsBeerTypesOpen(true) : undefined}
+        onOpenAdmin={user.role === "ADMIN" ? () => setIsAdminOpen(true) : undefined}
         username={user.username}
       />
 

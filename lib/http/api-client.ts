@@ -156,6 +156,8 @@ export function deleteAdminBeerLog(logId: string): Promise<{ success: true }> {
   return request<{ success: true }>(`/api/admin/logs/${logId}`, {
     method: "DELETE",
   });
+}
+
 export function getBeerStatistics(timeZone: string): Promise<BeerStatisticsDto> {
   return request<BeerStatisticsDto>(
     `/api/beers/statistics?timeZone=${encodeURIComponent(timeZone)}`,

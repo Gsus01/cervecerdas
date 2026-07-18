@@ -5,6 +5,7 @@ import {
   Gauge,
   LoaderCircle,
   LogOut,
+  ShieldCheck,
   Tags,
   UsersRound,
 } from "lucide-react";
@@ -20,6 +21,7 @@ interface AppHeaderProps {
   activePage: "counter" | "statistics" | "competition";
   username: string;
   onManageBeerTypes?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 const navigationItems = [
@@ -42,6 +44,7 @@ export function AppHeader({
   activePage,
   username,
   onManageBeerTypes,
+  onOpenAdmin,
 }: AppHeaderProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -66,6 +69,16 @@ export function AppHeader({
             >
               <Tags aria-hidden="true" className="size-4" />
               <span className="hidden min-[520px]:inline">Tipos de cerveza</span>
+            </Button>
+          ) : null}
+          {onOpenAdmin ? (
+            <Button
+              aria-label="Abrir administración"
+              onClick={onOpenAdmin}
+              variant="outline"
+            >
+              <ShieldCheck aria-hidden="true" className="size-4" />
+              <span className="hidden xl:inline">Administrar</span>
             </Button>
           ) : null}
           <Button
