@@ -15,6 +15,16 @@ const endpoints = [
   ["GET", "/api/users/ranking", "Clasificación general"],
   ["POST", "/api/beers", "Registrar una cerveza"],
   ["GET", "/api/beers/logs?page=0&size=20", "Historial paginado"],
+  [
+    "GET",
+    "/api/beers/statistics?timeZone=Europe%2FMadrid",
+    "Estadísticas personales",
+  ],
+  [
+    "GET",
+    "/api/beers/competition?timeZone=Europe%2FMadrid",
+    "Comparación semanal del grupo",
+  ],
 ] as const;
 
 export default function ApiDocsPage() {

@@ -80,6 +80,14 @@ describe("Dashboard", () => {
 
     expect(screen.getByLabelText("3 cervezas registradas")).toBeVisible();
     expect(screen.getByText("Hola, Carlos")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Estadísticas" })).toHaveAttribute(
+      "href",
+      "/statistics",
+    );
+    expect(screen.getByRole("link", { name: "Grupo" })).toHaveAttribute(
+      "href",
+      "/competition",
+    );
   });
 
   it("registra una cerveza y actualiza el contador sin recargar", async () => {

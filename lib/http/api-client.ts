@@ -5,7 +5,9 @@ import type {
   AdminOverviewDto,
   BeerAddedDto,
   BeerLogDto,
+  BeerStatisticsDto,
   BeerTypeDto,
+  GroupCompetitionDto,
   PageDto,
   RankingEntryDto,
   UserDto,
@@ -154,4 +156,14 @@ export function deleteAdminBeerLog(logId: string): Promise<{ success: true }> {
   return request<{ success: true }>(`/api/admin/logs/${logId}`, {
     method: "DELETE",
   });
+export function getBeerStatistics(timeZone: string): Promise<BeerStatisticsDto> {
+  return request<BeerStatisticsDto>(
+    `/api/beers/statistics?timeZone=${encodeURIComponent(timeZone)}`,
+  );
+}
+
+export function getGroupCompetition(timeZone: string): Promise<GroupCompetitionDto> {
+  return request<GroupCompetitionDto>(
+    `/api/beers/competition?timeZone=${encodeURIComponent(timeZone)}`,
+  );
 }

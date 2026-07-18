@@ -2,6 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, ShieldCheck, Tags } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { AdminPanelDialog } from "@/components/admin/admin-panel-dialog";
@@ -9,8 +10,7 @@ import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BeerCounter } from "@/components/dashboard/beer-counter";
 import { BeerTypesDialog } from "@/components/dashboard/beer-types-dialog";
 import { Ranking } from "@/components/dashboard/ranking";
-import { Brand } from "@/components/layout/brand";
-import { Button } from "@/components/ui/button";
+import { AppHeader } from "@/components/layout/app-header";
 import {
   addBeer,
   ApiClientError,
@@ -61,7 +61,6 @@ export function Dashboard({
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const addInFlight = useRef(false);
 
@@ -123,11 +122,6 @@ export function Dashboard({
     } finally {
       setIsLoadingLogs(false);
     }
-  }
-
-  async function handleSignOut() {
-    setIsSigningOut(true);
-    await signOut({ callbackUrl: "/login" });
   }
 
   function handleBeerTypeCreated(beerType: BeerTypeDto) {
@@ -208,6 +202,11 @@ export function Dashboard({
           </div>
         </div>
       </header>
+      <AppHeader
+        activePage="counter"
+        onManageBeerTypes={() => setIsBeerTypesOpen(true)}
+        username={user.username}
+      />
 
       <main className="mx-auto max-w-7xl space-y-5 px-5 py-6 sm:px-8 sm:py-8">
         <BeerCounter

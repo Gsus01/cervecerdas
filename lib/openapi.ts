@@ -222,6 +222,58 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/beers/statistics": {
+      get: {
+        tags: ["Beers"],
+        summary: "Consultar las estadísticas del usuario autenticado",
+        parameters: [
+          {
+            name: "timeZone",
+            in: "query",
+            description: "Zona horaria IANA usada para agrupar días y horas",
+            schema: { type: "string", default: "UTC", examples: ["Europe/Madrid"] },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Resumen y distribuciones del historial personal",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/BeerStatistics" },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/api/beers/competition": {
+      get: {
+        tags: ["Beers"],
+        summary: "Comparar la actividad semanal de todos los usuarios",
+        parameters: [
+          {
+            name: "timeZone",
+            in: "query",
+            description: "Zona horaria IANA usada para delimitar los días",
+            schema: { type: "string", default: "UTC", examples: ["Europe/Madrid"] },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Clasificación y actividad diaria del grupo",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/GroupCompetition" },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
     "/api/health": {
       get: {
         tags: ["System"],
@@ -349,6 +401,184 @@ export const openApiDocument = {
           size: { type: "integer", minimum: 1 },
           totalElements: { type: "integer", minimum: 0 },
           totalPages: { type: "integer", minimum: 0 },
+        },
+      },
+      StatisticCount: {
+        type: "object",
+        required: ["key", "label", "count"],
+        properties: {
+          key: { type: "string" },
+          label: { type: "string" },
+          count: { type: "integer", minimum: 0 },
+        },
+      },
+      BeerTypeStatistic: {
+        allOf: [
+          { $ref: "#/components/schemas/StatisticCount" },
+          {
+            type: "object",
+            required: ["beerTypeId", "photoDataUrl", "percentage"],
+            properties: {
+              beerTypeId: {
+                anyOf: [{ type: "string", format: "uuid" }, { type: "null" }],
+              },
+              photoDataUrl: {
+                anyOf: [{ type: "string" }, { type: "null" }],
+              },
+              percentage: { type: "integer", minimum: 0, maximum: 100 },
+            },
+          },
+        ],
+      },
+      BeerStatistics: {
+        type: "object",
+        required: [
+          "totalBeers",
+          "activeDays",
+          "averagePerActiveDay",
+          "varietyCount",
+          "last7Days",
+          "previous7Days",
+          "recentTrendPercentage",
+          "favoriteType",
+          "favoriteHour",
+          "byType",
+          "byWeekday",
+          "byTimeRange",
+          "last14Days",
+          "timeZone",
+          "generatedAt",
+        ],
+        properties: {
+          totalBeers: { type: "integer", minimum: 0 },
+          activeDays: { type: "integer", minimum: 0 },
+          averagePerActiveDay: { type: "number", minimum: 0 },
+          varietyCount: { type: "integer", minimum: 0 },
+          last7Days: { type: "integer", minimum: 0 },
+          previous7Days: { type: "integer", minimum: 0 },
+          recentTrendPercentage: {
+            anyOf: [{ type: "integer" }, { type: "null" }],
+          },
+          favoriteType: {
+            anyOf: [
+              { $ref: "#/components/schemas/BeerTypeStatistic" },
+              { type: "null" },
+            ],
+          },
+          favoriteHour: {
+            anyOf: [
+              { $ref: "#/components/schemas/StatisticCount" },
+              { type: "null" },
+            ],
+          },
+          byType: {
+            type: "array",
+            items: { $ref: "#/components/schemas/BeerTypeStatistic" },
+          },
+          byWeekday: {
+            type: "array",
+            items: { $ref: "#/components/schemas/StatisticCount" },
+          },
+          byTimeRange: {
+            type: "array",
+            items: { $ref: "#/components/schemas/StatisticCount" },
+          },
+          last14Days: {
+            type: "array",
+            items: { $ref: "#/components/schemas/StatisticCount" },
+          },
+          timeZone: { type: "string", examples: ["Europe/Madrid"] },
+          generatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CompetitionUser: {
+        type: "object",
+        required: [
+          "position",
+          "userId",
+          "username",
+          "totalBeers",
+          "last7Days",
+          "previous7Days",
+          "trendPercentage",
+          "dailyLast7",
+        ],
+        properties: {
+          position: { type: "integer", minimum: 1 },
+          userId: { type: "string", format: "uuid" },
+          username: { type: "string" },
+          totalBeers: { type: "integer", minimum: 0 },
+          last7Days: { type: "integer", minimum: 0 },
+          previous7Days: { type: "integer", minimum: 0 },
+          trendPercentage: {
+            anyOf: [{ type: "integer" }, { type: "null" }],
+          },
+          dailyLast7: {
+            type: "array",
+            items: { $ref: "#/components/schemas/StatisticCount" },
+          },
+        },
+      },
+      CompetitionBattle: {
+        type: "object",
+        required: [
+          "firstUserId",
+          "firstUsername",
+          "firstCount",
+          "secondUserId",
+          "secondUsername",
+          "secondCount",
+          "difference",
+        ],
+        properties: {
+          firstUserId: { type: "string", format: "uuid" },
+          firstUsername: { type: "string" },
+          firstCount: { type: "integer", minimum: 0 },
+          secondUserId: { type: "string", format: "uuid" },
+          secondUsername: { type: "string" },
+          secondCount: { type: "integer", minimum: 0 },
+          difference: { type: "integer", minimum: 0 },
+        },
+      },
+      GroupCompetition: {
+        type: "object",
+        required: [
+          "totalBeers",
+          "last7Days",
+          "activeUsers",
+          "users",
+          "leader",
+          "closestBattle",
+          "dailyTotals",
+          "timeZone",
+          "generatedAt",
+        ],
+        properties: {
+          totalBeers: { type: "integer", minimum: 0 },
+          last7Days: { type: "integer", minimum: 0 },
+          activeUsers: { type: "integer", minimum: 0 },
+          users: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CompetitionUser" },
+          },
+          leader: {
+            anyOf: [
+              { $ref: "#/components/schemas/CompetitionUser" },
+              { type: "null" },
+            ],
+          },
+          closestBattle: {
+            anyOf: [
+              { $ref: "#/components/schemas/CompetitionBattle" },
+              { type: "null" },
+            ],
+          },
+          dailyTotals: {
+            type: "array",
+            items: { $ref: "#/components/schemas/StatisticCount" },
+          },
+          timeZone: { type: "string", examples: ["Europe/Madrid"] },
+          generatedAt: { type: "string", format: "date-time" },
         },
       },
       ApiError: {
