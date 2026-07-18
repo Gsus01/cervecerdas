@@ -39,4 +39,26 @@ test("registro, login y primera cerveza", async ({ page }) => {
   await expect(page.getByText("Cerveza registrada. ¡Salud!")).toBeVisible();
   await expect(page.getByText(`${username} registró una cerveza`, { exact: false })).toBeVisible();
   await expect(page.getByText("· Lager")).toBeVisible();
+
+  await page.getByRole("link", { name: "Estadísticas" }).click();
+  await expect(page).toHaveURL(/\/statistics/);
+  await expect(page.getByRole("heading", { name: `Así brinda ${username}` })).toBeVisible();
+  await expect(page.getByText("Total registrado")).toBeVisible();
+  await expect(page.getByText("Lager").first()).toBeVisible();
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(hasHorizontalOverflow).toBe(false);
+
+  await page.getByRole("link", { name: "Grupo" }).click();
+  await expect(page).toHaveURL(/\/competition/);
+  await expect(
+    page.getByRole("heading", { name: `La liga de ${username} y compañía` }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Clasificación completa" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mapa de rondas" })).toBeVisible();
+  const groupHasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(groupHasHorizontalOverflow).toBe(false);
 });

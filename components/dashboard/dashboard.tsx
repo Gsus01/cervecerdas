@@ -1,15 +1,13 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, Tags } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BeerCounter } from "@/components/dashboard/beer-counter";
 import { BeerTypesDialog } from "@/components/dashboard/beer-types-dialog";
 import { Ranking } from "@/components/dashboard/ranking";
-import { Brand } from "@/components/layout/brand";
-import { Button } from "@/components/ui/button";
+import { AppHeader } from "@/components/layout/app-header";
 import {
   addBeer,
   ApiClientError,
@@ -57,7 +55,6 @@ export function Dashboard({
   const [isBeerTypesOpen, setIsBeerTypesOpen] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const addInFlight = useRef(false);
 
@@ -121,11 +118,6 @@ export function Dashboard({
     }
   }
 
-  async function handleSignOut() {
-    setIsSigningOut(true);
-    await signOut({ callbackUrl: "/login" });
-  }
-
   function handleBeerTypeCreated(beerType: BeerTypeDto) {
     setBeerTypes((current) =>
       [...current, beerType].sort((first, second) =>
@@ -140,39 +132,11 @@ export function Dashboard({
 
   return (
     <div className="min-h-dvh dashboard-background">
-      <header className="safe-top sticky top-0 z-30 border-b border-border/75 bg-background/90 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
-          <Brand />
-          <div className="flex items-center gap-2 sm:gap-4">
-            <p className="hidden text-sm text-muted-foreground sm:block">
-              Sesión de <span className="font-bold text-foreground">{user.username}</span>
-            </p>
-            <Button
-              aria-label="Tipos de cerveza"
-              onClick={() => setIsBeerTypesOpen(true)}
-              variant="outline"
-            >
-              <Tags aria-hidden="true" className="size-4" />
-              <span className="hidden min-[480px]:inline">Tipos de cerveza</span>
-              <span className="min-[480px]:hidden">Tipos</span>
-            </Button>
-            <Button
-              aria-busy={isSigningOut}
-              disabled={isSigningOut}
-              onClick={() => void handleSignOut()}
-              variant="outline"
-            >
-              {isSigningOut ? (
-                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-              ) : (
-                <LogOut aria-hidden="true" className="size-4" />
-              )}
-              <span className="hidden sm:inline">Cerrar sesión</span>
-              <span className="sm:hidden">Salir</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        activePage="counter"
+        onManageBeerTypes={() => setIsBeerTypesOpen(true)}
+        username={user.username}
+      />
 
       <main className="mx-auto max-w-7xl space-y-5 px-5 py-6 sm:px-8 sm:py-8">
         <BeerCounter
