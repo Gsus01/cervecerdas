@@ -1,11 +1,12 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut } from "lucide-react";
+import { AlertTriangle, CheckCircle2, LoaderCircle, LogOut, Tags } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BeerCounter } from "@/components/dashboard/beer-counter";
+import { BeerTypesDialog } from "@/components/dashboard/beer-types-dialog";
 import { Ranking } from "@/components/dashboard/ranking";
 import { Brand } from "@/components/layout/brand";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,13 @@ import {
   getBeerLogs,
   getRanking,
 } from "@/lib/http/api-client";
-import type { BeerLogDto, PageDto, RankingEntryDto, UserDto } from "@/lib/types/api";
+import type {
+  BeerLogDto,
+  BeerTypeDto,
+  PageDto,
+  RankingEntryDto,
+  UserDto,
+} from "@/lib/types/api";
 import { cn } from "@/lib/utils";
 
 interface ToastState {
@@ -33,16 +40,21 @@ interface DashboardProps {
   initialUser: UserDto;
   initialRanking: RankingEntryDto[];
   initialLogs: PageDto<BeerLogDto>;
+  initialBeerTypes: BeerTypeDto[];
 }
 
 export function Dashboard({
   initialUser,
   initialRanking,
   initialLogs,
+  initialBeerTypes,
 }: DashboardProps) {
   const [user, setUser] = useState(initialUser);
   const [ranking, setRanking] = useState(initialRanking);
   const [logs, setLogs] = useState(initialLogs);
+  const [beerTypes, setBeerTypes] = useState(initialBeerTypes);
+  const [selectedBeerTypeId, setSelectedBeerTypeId] = useState("");
+  const [isBeerTypesOpen, setIsBeerTypesOpen] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -67,7 +79,7 @@ export function Dashboard({
     setToast(null);
 
     try {
-      const result = await addBeer();
+      const result = await addBeer(selectedBeerTypeId);
       setUser((current) =>
         current ? { ...current, beerCount: result.beerCount } : current,
       );
@@ -114,6 +126,16 @@ export function Dashboard({
     await signOut({ callbackUrl: "/login" });
   }
 
+  function handleBeerTypeCreated(beerType: BeerTypeDto) {
+    setBeerTypes((current) =>
+      [...current, beerType].sort((first, second) =>
+        first.name.localeCompare(second.name, "es", { sensitivity: "base" }),
+      ),
+    );
+    setSelectedBeerTypeId(beerType.id);
+    setToast({ kind: "success", message: `Tipo ${beerType.name} añadido` });
+  }
+
   const currentPosition = ranking.find((entry) => entry.userId === user.id)?.position;
 
   return (
@@ -126,6 +148,15 @@ export function Dashboard({
               Sesión de <span className="font-bold text-foreground">{user.username}</span>
             </p>
             <Button
+              aria-label="Tipos de cerveza"
+              onClick={() => setIsBeerTypesOpen(true)}
+              variant="outline"
+            >
+              <Tags aria-hidden="true" className="size-4" />
+              <span className="hidden min-[480px]:inline">Tipos de cerveza</span>
+              <span className="min-[480px]:hidden">Tipos</span>
+            </Button>
+            <Button
               aria-busy={isSigningOut}
               disabled={isSigningOut}
               onClick={() => void handleSignOut()}
@@ -136,8 +167,8 @@ export function Dashboard({
               ) : (
                 <LogOut aria-hidden="true" className="size-4" />
               )}
-              <span className="hidden min-[390px]:inline">Cerrar sesión</span>
-              <span className="min-[390px]:hidden">Salir</span>
+              <span className="hidden sm:inline">Cerrar sesión</span>
+              <span className="sm:hidden">Salir</span>
             </Button>
           </div>
         </div>
@@ -145,9 +176,13 @@ export function Dashboard({
 
       <main className="mx-auto max-w-7xl space-y-5 px-5 py-6 sm:px-8 sm:py-8">
         <BeerCounter
+          beerTypes={beerTypes}
           isAdding={isAdding}
           onAddBeer={() => void handleAddBeer()}
+          onBeerTypeChange={setSelectedBeerTypeId}
+          onManageBeerTypes={() => setIsBeerTypesOpen(true)}
           position={currentPosition}
+          selectedBeerTypeId={selectedBeerTypeId}
           user={user}
         />
 
@@ -164,6 +199,13 @@ export function Dashboard({
       <footer className="mx-auto max-w-7xl px-5 pb-8 pt-3 text-center text-xs text-muted-foreground sm:px-8">
         Cervecerdas lleva la cuenta; tú marcas el ritmo. Disfruta con responsabilidad.
       </footer>
+
+      <BeerTypesDialog
+        beerTypes={beerTypes}
+        isOpen={isBeerTypesOpen}
+        onClose={() => setIsBeerTypesOpen(false)}
+        onCreated={handleBeerTypeCreated}
+      />
 
       {toast ? (
         <div

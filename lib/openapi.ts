@@ -11,6 +11,7 @@ export const openApiDocument = {
     { name: "Auth" },
     { name: "Users" },
     { name: "Beers" },
+    { name: "Beer types" },
     { name: "System" },
   ],
   paths: {
@@ -77,6 +78,14 @@ export const openApiDocument = {
       post: {
         tags: ["Beers"],
         summary: "Registrar una cerveza para el usuario autenticado",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AddBeerRequest" },
+            },
+          },
+        },
         responses: {
           "201": {
             description: "Cerveza registrada",
@@ -87,6 +96,49 @@ export const openApiDocument = {
             },
           },
           "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/api/beer-types": {
+      get: {
+        tags: ["Beer types"],
+        summary: "Consultar los tipos de cerveza disponibles",
+        responses: {
+          "200": {
+            description: "Tipos ordenados por nombre",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/BeerType" },
+                },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Beer types"],
+        summary: "Añadir un tipo de cerveza",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateBeerTypeRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Tipo creado",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/BeerType" } },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "409": { $ref: "#/components/responses/Conflict" },
         },
       },
     },
@@ -161,14 +213,56 @@ export const openApiDocument = {
       },
       BeerLog: {
         type: "object",
-        required: ["id", "userId", "username", "actionType", "quantity", "createdAt"],
+        required: [
+          "id",
+          "userId",
+          "username",
+          "actionType",
+          "quantity",
+          "beerType",
+          "createdAt",
+        ],
         properties: {
           id: { type: "string", format: "uuid" },
           userId: { type: "string", format: "uuid" },
           username: { type: "string" },
           actionType: { type: "string", enum: ["BEER_ADDED"] },
           quantity: { type: "integer", const: 1 },
+          beerType: {
+            anyOf: [
+              { $ref: "#/components/schemas/BeerType" },
+              { type: "null" },
+            ],
+          },
           createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      AddBeerRequest: {
+        type: "object",
+        required: ["beerTypeId"],
+        properties: {
+          beerTypeId: { type: "string", format: "uuid" },
+        },
+      },
+      BeerType: {
+        type: "object",
+        required: ["id", "name", "photoDataUrl", "createdAt"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string", maxLength: 50 },
+          photoDataUrl: {
+            type: "string",
+            pattern: "^data:image/(jpeg|png|webp);base64,",
+          },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateBeerTypeRequest: {
+        type: "object",
+        required: ["name", "photoDataUrl"],
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 50 },
+          photoDataUrl: { type: "string", maxLength: 1400000 },
         },
       },
       BeerAdded: {

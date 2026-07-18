@@ -1,14 +1,19 @@
 import { Beer, LoaderCircle, Plus, TrendingUp } from "lucide-react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { UserDto } from "@/lib/types/api";
+import type { BeerTypeDto, UserDto } from "@/lib/types/api";
 
 interface BeerCounterProps {
   user: UserDto;
   position?: number;
   isAdding: boolean;
   onAddBeer: () => void;
+  beerTypes: BeerTypeDto[];
+  selectedBeerTypeId: string;
+  onBeerTypeChange: (beerTypeId: string) => void;
+  onManageBeerTypes: () => void;
 }
 
 export function BeerCounter({
@@ -16,7 +21,15 @@ export function BeerCounter({
   position,
   isAdding,
   onAddBeer,
+  beerTypes,
+  selectedBeerTypeId,
+  onBeerTypeChange,
+  onManageBeerTypes,
 }: BeerCounterProps) {
+  const selectedBeerType = beerTypes.find(
+    (beerType) => beerType.id === selectedBeerTypeId,
+  );
+
   return (
     <Card className="relative isolate min-h-[310px] overflow-hidden border-secondary bg-secondary text-secondary-foreground">
       <div className="absolute -right-16 -top-20 -z-10 size-64 rounded-full bg-accent/10" />
@@ -47,25 +60,71 @@ export function BeerCounter({
           </span>
         </div>
 
-        <div className="mt-auto flex flex-col gap-4 pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-auto pt-8">
           <div className="flex min-h-11 items-center gap-2 text-sm text-white/70">
             <TrendingUp aria-hidden="true" className="size-4 text-accent" />
             {position ? `Puesto ${position} en la clasificación` : "Calculando tu puesto"}
           </div>
-          <Button
-            aria-busy={isAdding}
-            className="bg-accent text-accent-foreground shadow-lg shadow-black/15 hover:bg-accent/90 sm:min-w-52"
-            disabled={isAdding}
-            onClick={onAddBeer}
-            size="lg"
-          >
-            {isAdding ? (
-              <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
-            ) : (
-              <Plus aria-hidden="true" className="size-5" strokeWidth={3} />
-            )}
-            {isAdding ? "Registrando…" : "Registrar cerveza"}
-          </Button>
+          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-white" htmlFor="beer-type-select">
+                Tipo de cerveza
+              </label>
+              <div className="flex gap-2">
+                {selectedBeerType ? (
+                  <span className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-white/20 bg-white/10">
+                    <Image
+                      alt=""
+                      className="object-cover"
+                      fill
+                      sizes="56px"
+                      src={selectedBeerType.photoDataUrl}
+                      unoptimized
+                    />
+                  </span>
+                ) : null}
+                <select
+                  className="h-14 min-w-0 flex-1 rounded-xl border border-white/25 bg-white/10 px-3 text-base font-bold text-white shadow-sm outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={beerTypes.length === 0 || isAdding}
+                  id="beer-type-select"
+                  onChange={(event) => onBeerTypeChange(event.target.value)}
+                  value={selectedBeerTypeId}
+                >
+                  <option className="text-foreground" value="">
+                    {beerTypes.length === 0 ? "No hay tipos disponibles" : "Selecciona un tipo"}
+                  </option>
+                  {beerTypes.map((beerType) => (
+                    <option className="text-foreground" key={beerType.id} value={beerType.id}>
+                      {beerType.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {beerTypes.length === 0 ? (
+                <button
+                  className="min-h-11 text-left text-sm font-bold text-accent underline decoration-accent/50 underline-offset-4 hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  onClick={onManageBeerTypes}
+                  type="button"
+                >
+                  Añade un tipo para poder registrar
+                </button>
+              ) : null}
+            </div>
+            <Button
+              aria-busy={isAdding}
+              className="bg-accent text-accent-foreground shadow-lg shadow-black/15 hover:bg-accent/90 sm:min-w-52"
+              disabled={isAdding || !selectedBeerTypeId}
+              onClick={onAddBeer}
+              size="lg"
+            >
+              {isAdding ? (
+                <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+              ) : (
+                <Plus aria-hidden="true" className="size-5" strokeWidth={3} />
+              )}
+              {isAdding ? "Registrando…" : "Registrar cerveza"}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

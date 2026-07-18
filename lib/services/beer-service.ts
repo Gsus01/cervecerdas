@@ -3,13 +3,26 @@ import "server-only";
 import { count, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { beerLogs, users } from "@/db/schema";
+import { beerLogs, beerTypes, users } from "@/db/schema";
 import { NotFoundError } from "@/lib/http/errors";
 import type { BeerAddedDto, BeerLogDto, PageDto } from "@/lib/types/api";
 
-export async function addBeerForUser(userId: string): Promise<BeerAddedDto> {
+export async function addBeerForUser(
+  userId: string,
+  beerTypeId: string,
+): Promise<BeerAddedDto> {
   return db.transaction(async (transaction) => {
     const now = new Date();
+    const [beerType] = await transaction
+      .select()
+      .from(beerTypes)
+      .where(eq(beerTypes.id, beerTypeId))
+      .limit(1);
+
+    if (!beerType) {
+      throw new NotFoundError("El tipo de cerveza seleccionado ya no existe");
+    }
+
     const [updatedUser] = await transaction
       .update(users)
       .set({
@@ -31,6 +44,7 @@ export async function addBeerForUser(userId: string): Promise<BeerAddedDto> {
       .insert(beerLogs)
       .values({
         userId,
+        beerTypeId,
         actionType: "BEER_ADDED",
         quantity: 1,
         createdAt: now,
@@ -49,6 +63,12 @@ export async function addBeerForUser(userId: string): Promise<BeerAddedDto> {
         username: updatedUser.username,
         actionType: createdLog.actionType,
         quantity: createdLog.quantity,
+        beerType: {
+          id: beerType.id,
+          name: beerType.name,
+          photoDataUrl: beerType.photoDataUrl,
+          createdAt: beerType.createdAt.toISOString(),
+        },
         createdAt: createdLog.createdAt.toISOString(),
       },
     };
@@ -69,10 +89,15 @@ export async function getBeerLogs(
         username: users.username,
         actionType: beerLogs.actionType,
         quantity: beerLogs.quantity,
+        beerTypeId: beerTypes.id,
+        beerTypeName: beerTypes.name,
+        beerTypePhotoDataUrl: beerTypes.photoDataUrl,
+        beerTypeCreatedAt: beerTypes.createdAt,
         createdAt: beerLogs.createdAt,
       })
       .from(beerLogs)
       .innerJoin(users, eq(beerLogs.userId, users.id))
+      .leftJoin(beerTypes, eq(beerLogs.beerTypeId, beerTypes.id))
       .orderBy(desc(beerLogs.createdAt), desc(beerLogs.id))
       .limit(size)
       .offset(offset),
@@ -82,7 +107,23 @@ export async function getBeerLogs(
 
   return {
     content: rows.map((row) => ({
-      ...row,
+      id: row.id,
+      userId: row.userId,
+      username: row.username,
+      actionType: row.actionType,
+      quantity: row.quantity,
+      beerType:
+        row.beerTypeId &&
+        row.beerTypeName &&
+        row.beerTypePhotoDataUrl &&
+        row.beerTypeCreatedAt
+          ? {
+              id: row.beerTypeId,
+              name: row.beerTypeName,
+              photoDataUrl: row.beerTypePhotoDataUrl,
+              createdAt: row.beerTypeCreatedAt.toISOString(),
+            }
+          : null,
       createdAt: row.createdAt.toISOString(),
     })),
     page,

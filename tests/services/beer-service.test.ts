@@ -13,7 +13,17 @@ describe("addBeerForUser", () => {
 
   it("incrementa el contador y crea el historial en la misma transacción", async () => {
     const userId = "4ddde027-2e19-49f6-a213-a93360e8b1fb";
+    const beerTypeId = "bf0dc4e4-1797-4ef8-9149-fe74d2ac1642";
     const logId = "df32cc9b-bb38-4f40-aee4-953f92795f8c";
+    const beerType = {
+      id: beerTypeId,
+      name: "IPA",
+      photoDataUrl: "data:image/png;base64,aW1hZ2Vu",
+      createdAt: new Date("2026-07-17T18:30:00.000Z"),
+    };
+    const limit = vi.fn().mockResolvedValue([beerType]);
+    const typeWhere = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ where: typeWhere }));
     const set = vi.fn();
     const where = vi.fn();
     const returningUser = vi.fn().mockResolvedValue([
@@ -30,6 +40,7 @@ describe("addBeerForUser", () => {
       },
     ]);
     const transaction = {
+      select: vi.fn(() => ({ from })),
       update: vi.fn(() => ({
         set: set.mockImplementation(() => ({
           where: where.mockImplementation(() => ({ returning: returningUser })),
@@ -41,7 +52,7 @@ describe("addBeerForUser", () => {
     };
     databaseMock.transaction.mockImplementation(async (callback) => callback(transaction));
 
-    const result = await addBeerForUser(userId);
+    const result = await addBeerForUser(userId, beerTypeId);
 
     const updateValues = set.mock.calls[0]?.[0] as
       | { beerCount: unknown; updatedAt: Date }
@@ -49,6 +60,7 @@ describe("addBeerForUser", () => {
     const logValues = values.mock.calls[0]?.[0] as
       | {
           userId: string;
+          beerTypeId: string;
           actionType: string;
           quantity: number;
           createdAt: Date;
@@ -59,6 +71,7 @@ describe("addBeerForUser", () => {
     expect(updateValues?.beerCount).toBeDefined();
     expect(logValues).toMatchObject({
       userId,
+      beerTypeId,
       actionType: "BEER_ADDED",
       quantity: 1,
     });
@@ -71,6 +84,10 @@ describe("addBeerForUser", () => {
         username: "Carlos",
         actionType: "BEER_ADDED",
         quantity: 1,
+        beerType: {
+          ...beerType,
+          createdAt: "2026-07-17T18:30:00.000Z",
+        },
         createdAt: "2026-07-17T19:35:00.000Z",
       },
     });

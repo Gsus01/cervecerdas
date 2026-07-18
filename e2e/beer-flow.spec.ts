@@ -20,9 +20,23 @@ test("registro, login y primera cerveza", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/home/);
   await expect(page.getByLabel("0 cervezas registradas")).toBeVisible();
+  await page.getByRole("button", { name: "Tipos de cerveza" }).click();
+  await page.getByLabel("Nombre").fill("Lager");
+  await page.getByLabel("Foto").setInputFiles({
+    name: "lager.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X9q7WQAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+  });
+  await page.getByRole("button", { name: "Añadir tipo" }).click();
+  await expect(page.getByText("Tipo Lager añadido")).toBeVisible();
+  await expect(page.getByLabel("Tipo de cerveza")).toHaveValue(/.+/);
   await page.getByRole("button", { name: "Registrar cerveza" }).click();
 
   await expect(page.getByLabel("1 cerveza registrada")).toBeVisible();
   await expect(page.getByText("Cerveza registrada. ¡Salud!")).toBeVisible();
-  await expect(page.getByText(`${username} registró una cerveza`)).toBeVisible();
+  await expect(page.getByText(`${username} registró una cerveza`, { exact: false })).toBeVisible();
+  await expect(page.getByText("· Lager")).toBeVisible();
 });

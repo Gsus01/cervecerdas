@@ -6,6 +6,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   unique,
   uuid,
@@ -19,6 +20,26 @@ const citext = customType<{ data: string }>({
 });
 
 export const beerActionType = pgEnum("beer_action_type", ["BEER_ADDED"]);
+
+export const beerTypes = pgTable(
+  "beer_types",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: citext("name").notNull(),
+    photoDataUrl: text("photo_data_url").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("beer_types_name_unique").on(table.name),
+    check("beer_types_name_not_blank", sql`length(btrim(${table.name}::text)) > 0`),
+    check(
+      "beer_types_photo_size",
+      sql`length(${table.photoDataUrl}) <= 1400000`,
+    ),
+  ],
+);
 
 export const users = pgTable(
   "users",
@@ -51,6 +72,9 @@ export const beerLogs = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    beerTypeId: uuid("beer_type_id").references(() => beerTypes.id, {
+      onDelete: "restrict",
+    }),
     actionType: beerActionType("action_type").notNull(),
     quantity: integer("quantity").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
@@ -61,6 +85,7 @@ export const beerLogs = pgTable(
     check("beer_logs_quantity_positive", sql`${table.quantity} > 0`),
     index("beer_logs_created_at_idx").on(table.createdAt.desc()),
     index("beer_logs_user_id_idx").on(table.userId),
+    index("beer_logs_beer_type_id_idx").on(table.beerTypeId),
   ],
 );
 
@@ -73,8 +98,17 @@ export const beerLogsRelations = relations(beerLogs, ({ one }) => ({
     fields: [beerLogs.userId],
     references: [users.id],
   }),
+  beerType: one(beerTypes, {
+    fields: [beerLogs.beerTypeId],
+    references: [beerTypes.id],
+  }),
+}));
+
+export const beerTypesRelations = relations(beerTypes, ({ many }) => ({
+  beerLogs: many(beerLogs),
 }));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type BeerLog = typeof beerLogs.$inferSelect;
+export type BeerType = typeof beerTypes.$inferSelect;
