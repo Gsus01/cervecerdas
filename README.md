@@ -35,6 +35,10 @@ No se utiliza Java. Next.js sirve tanto la interfaz como los endpoints, por lo q
 - Protección frente a dobles pulsaciones mientras una petición está en curso.
 - Historial en UTC, ordenado de más reciente a más antiguo y paginado.
 - Fechas convertidas a la zona horaria del navegador.
+- Dashboard personal de estadísticas por cantidad, tipo, día y hora local.
+- Comparativa semanal y tendencia de actividad de los últimos 14 días.
+- Pestaña de competición semanal para comparar a todos los amigos registrados.
+- Podio, clasificación, actividad diaria y mapa de intensidad del grupo.
 - Ranking descendente con desempate alfabético.
 - Estados de carga, éxito, error, sesión caducada y listas vacías.
 - Diseño responsive, navegación por teclado y mensajes accesibles.
@@ -163,6 +167,8 @@ npm run db:studio     # abre el explorador local de Drizzle
 | `POST` | `/api/beer-types` | Sí | Añade un tipo con nombre y foto |
 | `POST` | `/api/beers` | Sí | Añade una cerveza al usuario de la sesión |
 | `GET` | `/api/beers/logs?page=0&size=20` | Sí | Devuelve el historial paginado |
+| `GET` | `/api/beers/statistics?timeZone=Europe%2FMadrid` | Sí | Devuelve estadísticas personales |
+| `GET` | `/api/beers/competition?timeZone=Europe%2FMadrid` | Sí | Compara la actividad semanal del grupo |
 | `GET` | `/api/health` | No | Healthcheck del proceso web |
 | `GET` | `/api/openapi` | No | Especificación OpenAPI 3.1 |
 
@@ -238,7 +244,7 @@ docker compose up -d --build
 npm run test:e2e
 ```
 
-La suite E2E crea un usuario único, inicia sesión, añade un tipo de cerveza, registra una cerveza de ese tipo y comprueba contador e historial tanto en escritorio como en viewport móvil.
+La suite E2E crea un usuario único, inicia sesión, añade un tipo de cerveza, registra una cerveza de ese tipo y comprueba contador, historial, estadísticas y competición tanto en escritorio como en viewport móvil.
 
 ## Datos de demostración
 

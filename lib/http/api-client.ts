@@ -4,7 +4,9 @@ import type {
   ApiErrorDto,
   BeerAddedDto,
   BeerLogDto,
+  BeerStatisticsDto,
   BeerTypeDto,
+  GroupCompetitionDto,
   PageDto,
   RankingEntryDto,
   UserDto,
@@ -126,4 +128,16 @@ export function createBeerType(
 
 export function getBeerLogs(page = 0, size = 20): Promise<PageDto<BeerLogDto>> {
   return request<PageDto<BeerLogDto>>(`/api/beers/logs?page=${page}&size=${size}`);
+}
+
+export function getBeerStatistics(timeZone: string): Promise<BeerStatisticsDto> {
+  return request<BeerStatisticsDto>(
+    `/api/beers/statistics?timeZone=${encodeURIComponent(timeZone)}`,
+  );
+}
+
+export function getGroupCompetition(timeZone: string): Promise<GroupCompetitionDto> {
+  return request<GroupCompetitionDto>(
+    `/api/beers/competition?timeZone=${encodeURIComponent(timeZone)}`,
+  );
 }

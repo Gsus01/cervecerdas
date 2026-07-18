@@ -27,7 +27,7 @@ export function Brand({ className, inverse = false }: BrandProps) {
       >
         <Beer aria-hidden="true" className="size-5" strokeWidth={2.4} />
       </span>
-      Cervecerdas
+      <span className="min-w-0 truncate">Cervecerdas</span>
     </Link>
   );
 }
