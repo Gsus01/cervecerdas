@@ -49,6 +49,72 @@ export interface BeerAddedDto {
   log: BeerLogDto;
 }
 
+export type EventStatus = "UPCOMING" | "ACTIVE" | "FINISHED";
+
+export interface EventSummaryDto {
+  id: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  status: EventStatus;
+  isCreator: boolean;
+  inviteCode: string | null;
+  memberCount: number;
+  totalBeers: number;
+}
+
+export interface EventTimelinePointDto {
+  key: string;
+  label: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface EventTimelineSeriesDto {
+  key: string;
+  label: string;
+  userId: string;
+  values: number[];
+  total: number;
+}
+
+export interface EventTimelineDto {
+  bucketMinutes: number;
+  points: EventTimelinePointDto[];
+  series: EventTimelineSeriesDto[];
+}
+
+export interface EventBeverageTotalDto {
+  key: string;
+  beerTypeId: string | null;
+  name: string;
+  photoDataUrl: string | null;
+  total: number;
+  percentage: number;
+}
+
+export interface EventParticipantBreakdownDto {
+  userId: string;
+  username: string;
+  total: number;
+  values: number[];
+}
+
+export interface EventDashboardDto {
+  event: EventSummaryDto;
+  ranking: RankingEntryDto[];
+  hourlyConsumption: StatisticCountDto[];
+  timeline: EventTimelineDto;
+  beverageTotals: EventBeverageTotalDto[];
+  participantBreakdown: EventParticipantBreakdownDto[];
+  recentLogs: PageDto<BeerLogDto>;
+  filteredTotal: number;
+  selectedBeerTypeId: string | null;
+  selectedBeerTypeIds: string[];
+  timeZone: string;
+  generatedAt: string;
+}
+
 export interface StatisticCountDto {
   key: string;
   label: string;
@@ -75,39 +141,6 @@ export interface BeerStatisticsDto {
   byWeekday: StatisticCountDto[];
   byTimeRange: StatisticCountDto[];
   last14Days: StatisticCountDto[];
-  timeZone: string;
-  generatedAt: string;
-}
-
-export interface CompetitionUserDto {
-  position: number;
-  userId: string;
-  username: string;
-  totalBeers: number;
-  last7Days: number;
-  previous7Days: number;
-  trendPercentage: number | null;
-  dailyLast7: StatisticCountDto[];
-}
-
-export interface CompetitionBattleDto {
-  firstUserId: string;
-  firstUsername: string;
-  firstCount: number;
-  secondUserId: string;
-  secondUsername: string;
-  secondCount: number;
-  difference: number;
-}
-
-export interface GroupCompetitionDto {
-  totalBeers: number;
-  last7Days: number;
-  activeUsers: number;
-  users: CompetitionUserDto[];
-  leader: CompetitionUserDto | null;
-  closestBattle: CompetitionBattleDto | null;
-  dailyTotals: StatisticCountDto[];
   timeZone: string;
   generatedAt: string;
 }

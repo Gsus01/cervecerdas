@@ -75,7 +75,7 @@ function HiddenDataTable({
       <thead>
         <tr>
           <th scope="col">Periodo</th>
-          <th scope="col">Cervezas</th>
+          <th scope="col">Bebidas</th>
         </tr>
       </thead>
       <tbody>
@@ -190,7 +190,8 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
             </span>
             <h1 className="mt-5 font-display text-3xl font-black">Tu historia empieza con una</h1>
             <p className="mt-3 text-sm leading-6 text-white/70">
-              Cuando registres cervezas, aquí verás tus tipos, días y horas más habituales.
+              Cuando registres bebidas en un evento, aquí verás tus tipos,
+              días y horas más habituales.
             </p>
             <Link
               className={cn(
@@ -231,7 +232,8 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
               Así brinda {username}
             </h1>
             <p className="mt-3 text-sm leading-6 text-white/70 sm:text-base">
-              Un vistazo a tus hábitos, desde el tipo que más eliges hasta tu momento favorito.
+              Un vistazo conjunto a las bebidas de todos tus eventos, desde
+              el tipo que más eliges hasta tu momento favorito.
             </p>
           </div>
           <span className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-bold text-white/80">
@@ -276,14 +278,16 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
         <Card className="xl:col-span-2" aria-labelledby="recent-activity-title">
           <CardHeader>
             <CardTitle id="recent-activity-title">Tu ritmo reciente</CardTitle>
-            <CardDescription>Cervezas registradas cada día durante las últimas dos semanas.</CardDescription>
+            <CardDescription>
+              Bebidas registradas cada día durante las últimas dos semanas.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <figure aria-label="Actividad diaria de los últimos 14 días">
               <div className="flex h-52 items-end gap-1.5 border-b border-border pt-6 sm:gap-2.5">
                 {statistics.last14Days.map((day) => (
                   <div
-                    aria-label={`${day.label}: ${day.count} ${day.count === 1 ? "cerveza" : "cervezas"}`}
+                    aria-label={`${day.label}: ${day.count} ${day.count === 1 ? "bebida" : "bebidas"}`}
                     className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
                     key={day.key}
                   >
@@ -344,7 +348,9 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
         <Card aria-labelledby="type-distribution-title">
           <CardHeader>
             <CardTitle id="type-distribution-title">Tipos que eliges</CardTitle>
-            <CardDescription>Distribución de todo tu historial por tipo de cerveza.</CardDescription>
+            <CardDescription>
+              Distribución de todo tu historial por tipo de bebida.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="space-y-4">
@@ -386,11 +392,11 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
             <CardDescription>Qué días concentran más registros en tu historial.</CardDescription>
           </CardHeader>
           <CardContent>
-            <figure aria-label="Cervezas registradas por día de la semana">
+            <figure aria-label="Bebidas registradas por día de la semana">
               <div className="flex h-48 items-end gap-2 border-b border-border pt-5 sm:gap-4">
                 {statistics.byWeekday.map((day) => (
                   <div
-                    aria-label={`${day.label}: ${day.count} ${day.count === 1 ? "cerveza" : "cervezas"}`}
+                    aria-label={`${day.label}: ${day.count} ${day.count === 1 ? "bebida" : "bebidas"}`}
                     className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
                     key={day.key}
                   >
@@ -409,7 +415,7 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
                 ))}
               </div>
               <HiddenDataTable
-                caption="Cervezas registradas por día de la semana"
+                caption="Bebidas registradas por día de la semana"
                 rows={statistics.byWeekday}
               />
             </figure>
@@ -443,7 +449,7 @@ export function StatisticsDashboard({ username }: StatisticsDashboardProps) {
             ))}
           </div>
           <HiddenDataTable
-            caption="Cervezas registradas por franja horaria"
+            caption="Bebidas registradas por franja horaria"
             rows={statistics.byTimeRange}
           />
         </CardContent>

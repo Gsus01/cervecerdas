@@ -7,7 +7,7 @@ import {
   LogOut,
   ShieldCheck,
   Tags,
-  UsersRound,
+  Trophy,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
@@ -18,30 +18,40 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface AppHeaderProps {
-  activePage: "counter" | "statistics" | "competition";
+  activePage?: "counter" | "event" | "statistics";
+  eventId?: string;
   username: string;
   onManageBeerTypes?: () => void;
   onOpenAdmin?: () => void;
 }
 
 const navigationItems = [
-  { key: "counter", href: "/home", label: "Contador", icon: Gauge },
+  {
+    key: "counter",
+    href: "/home",
+    label: "Contador",
+    shortLabel: "Contador",
+    icon: Gauge,
+  },
+  {
+    key: "event",
+    href: "/competition",
+    label: "Evento",
+    shortLabel: "Evento",
+    icon: Trophy,
+  },
   {
     key: "statistics",
     href: "/statistics",
-    label: "Estadísticas",
+    label: "Mis estadísticas",
+    shortLabel: "Mis datos",
     icon: BarChart3,
-  },
-  {
-    key: "competition",
-    href: "/competition",
-    label: "Grupo",
-    icon: UsersRound,
   },
 ] as const;
 
 export function AppHeader({
   activePage,
+  eventId,
   username,
   onManageBeerTypes,
   onOpenAdmin,
@@ -63,12 +73,14 @@ export function AppHeader({
           </p>
           {onManageBeerTypes ? (
             <Button
-              aria-label="Tipos de cerveza"
+              aria-label="Catálogo de bebidas"
               onClick={onManageBeerTypes}
               variant="outline"
             >
               <Tags aria-hidden="true" className="size-4" />
-              <span className="hidden min-[520px]:inline">Tipos de cerveza</span>
+              <span className="hidden min-[520px]:inline">
+                Catálogo de bebidas
+              </span>
             </Button>
           ) : null}
           {onOpenAdmin ? (
@@ -103,20 +115,26 @@ export function AppHeader({
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.key === activePage;
+            const href =
+              eventId && (item.key === "counter" || item.key === "event")
+                ? `${item.href}?eventId=${encodeURIComponent(eventId)}`
+                : item.href;
             return (
               <Link
                 aria-current={isActive ? "page" : undefined}
+                aria-label={item.label}
                 className={cn(
                   "relative inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-lg px-2 text-sm font-bold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:max-w-48 sm:gap-2 sm:px-4",
                   isActive
                     ? "bg-accent/35 text-foreground after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
-                href={item.href}
+                href={href}
                 key={item.key}
               >
                 <Icon aria-hidden="true" className="size-4" />
-                {item.label}
+                <span className="sm:hidden">{item.shortLabel}</span>
+                <span className="hidden sm:inline">{item.label}</span>
               </Link>
             );
           })}

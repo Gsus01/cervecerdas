@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarPlus,
+  CheckCircle2,
+  LoaderCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { AdminPanelDialog } from "@/components/admin/admin-panel-dialog";
@@ -8,20 +15,22 @@ import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BeerCounter } from "@/components/dashboard/beer-counter";
 import { BeerTypesDialog } from "@/components/dashboard/beer-types-dialog";
 import { Ranking } from "@/components/dashboard/ranking";
+import { EventSelector } from "@/components/events/event-selector";
 import { AppHeader } from "@/components/layout/app-header";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
-  addBeer,
+  addEventBeer,
   ApiClientError,
-  getBeerLogs,
   getBeerTypes,
   getCurrentUser,
-  getRanking,
+  getEventDashboard,
 } from "@/lib/http/api-client";
 import type {
-  BeerLogDto,
   BeerTypeDto,
-  PageDto,
-  RankingEntryDto,
+  EventDashboardDto,
+  EventStatus,
+  EventSummaryDto,
   UserDto,
 } from "@/lib/types/api";
 import { cn } from "@/lib/utils";
@@ -37,29 +46,49 @@ function messageFromError(error: unknown): string {
     : "La operación no se ha podido completar";
 }
 
+function browserTimeZone(fallback: string): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || fallback;
+}
+
+function statusAt(event: EventSummaryDto, timestamp: number): EventStatus {
+  if (timestamp < new Date(event.startsAt).getTime()) {
+    return "UPCOMING";
+  }
+  if (timestamp >= new Date(event.endsAt).getTime()) {
+    return "FINISHED";
+  }
+  return "ACTIVE";
+}
+
 interface DashboardProps {
   initialUser: UserDto;
-  initialRanking: RankingEntryDto[];
-  initialLogs: PageDto<BeerLogDto>;
+  initialEvents: EventSummaryDto[];
+  initialDashboard: EventDashboardDto | null;
   initialBeerTypes: BeerTypeDto[];
 }
 
 export function Dashboard({
   initialUser,
-  initialRanking,
-  initialLogs,
+  initialEvents,
+  initialDashboard,
   initialBeerTypes,
 }: DashboardProps) {
+  const router = useRouter();
   const [user, setUser] = useState(initialUser);
-  const [ranking, setRanking] = useState(initialRanking);
-  const [logs, setLogs] = useState(initialLogs);
+  const [dashboard, setDashboard] = useState(initialDashboard);
+  const [events, setEvents] = useState(initialEvents);
+  const [selectedEventId, setSelectedEventId] = useState(
+    initialDashboard?.event.id ?? "",
+  );
   const [beerTypes, setBeerTypes] = useState(initialBeerTypes);
   const [selectedBeerTypeId, setSelectedBeerTypeId] = useState("");
   const [isBeerTypesOpen, setIsBeerTypesOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isLoadingEvent, setIsLoadingEvent] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [statusClock, setStatusClock] = useState<number | null>(null);
   const addInFlight = useRef(false);
 
   useEffect(() => {
@@ -70,8 +99,55 @@ export function Dashboard({
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    const refreshStatus = () => setStatusClock(Date.now());
+    const initialRefresh = window.setTimeout(refreshStatus, 0);
+    const interval = window.setInterval(refreshStatus, 15_000);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  function applyDashboard(nextDashboard: EventDashboardDto) {
+    setDashboard(nextDashboard);
+    setEvents((current) =>
+      current.map((event) =>
+        event.id === nextDashboard.event.id ? nextDashboard.event : event,
+      ),
+    );
+  }
+
+  async function loadEvent(eventId: string, page = 0) {
+    const timeZone = browserTimeZone(dashboard?.timeZone ?? "Europe/Madrid");
+    return getEventDashboard(eventId, timeZone, [], page);
+  }
+
+  async function handleEventChange(eventId: string) {
+    setSelectedEventId(eventId);
+    setSelectedBeerTypeId("");
+    setToast(null);
+    router.replace(`/home?eventId=${encodeURIComponent(eventId)}`, {
+      scroll: false,
+    });
+    setIsLoadingEvent(true);
+    try {
+      applyDashboard(await loadEvent(eventId));
+    } catch (error) {
+      setDashboard(null);
+      setToast({ kind: "error", message: messageFromError(error) });
+    } finally {
+      setIsLoadingEvent(false);
+    }
+  }
+
   async function handleAddBeer() {
-    if (addInFlight.current) {
+    if (
+      addInFlight.current ||
+      !selectedEventId ||
+      !dashboard ||
+      statusAt(dashboard.event, Date.now()) !== "ACTIVE"
+    ) {
       return;
     }
 
@@ -80,29 +156,12 @@ export function Dashboard({
     setToast(null);
 
     try {
-      const result = await addBeer(selectedBeerTypeId);
-      setUser((current) =>
-        current ? { ...current, beerCount: result.beerCount } : current,
-      );
-      setLogs((current) => ({
-        ...current,
-        page: 0,
-        content: [result.log, ...current.content].slice(0, current.size),
-        totalElements: current.totalElements + 1,
-        totalPages: Math.ceil((current.totalElements + 1) / current.size),
-      }));
-      setToast({ kind: "success", message: "Cerveza registrada. ¡Salud!" });
-
-      const [nextRanking, firstLogPage] = await Promise.allSettled([
-        getRanking(),
-        getBeerLogs(0),
-      ]);
-      if (nextRanking.status === "fulfilled") {
-        setRanking(nextRanking.value);
-      }
-      if (firstLogPage.status === "fulfilled") {
-        setLogs(firstLogPage.value);
-      }
+      await addEventBeer(selectedEventId, selectedBeerTypeId);
+      applyDashboard(await loadEvent(selectedEventId));
+      setToast({
+        kind: "success",
+        message: "Bebida registrada en este evento. ¡Salud!",
+      });
     } catch (error) {
       setToast({ kind: "error", message: messageFromError(error) });
     } finally {
@@ -112,9 +171,12 @@ export function Dashboard({
   }
 
   async function handlePageChange(page: number) {
+    if (!selectedEventId) {
+      return;
+    }
     setIsLoadingLogs(true);
     try {
-      setLogs(await getBeerLogs(page));
+      applyDashboard(await loadEvent(selectedEventId, page));
     } catch (error) {
       setToast({ kind: "error", message: messageFromError(error) });
     } finally {
@@ -129,69 +191,155 @@ export function Dashboard({
       ),
     );
     setSelectedBeerTypeId(beerType.id);
-    setToast({ kind: "success", message: `Tipo ${beerType.name} añadido` });
+    setToast({
+      kind: "success",
+      message: `${beerType.name} se ha añadido al catálogo compartido`,
+    });
   }
 
   function handleBeerTypeDeleted(beerTypeId: string) {
-    setBeerTypes((current) => current.filter((beerType) => beerType.id !== beerTypeId));
-    setSelectedBeerTypeId((current) => current === beerTypeId ? "" : current);
+    setBeerTypes((current) =>
+      current.filter((beerType) => beerType.id !== beerTypeId),
+    );
+    setSelectedBeerTypeId((current) =>
+      current === beerTypeId ? "" : current,
+    );
     setToast({ kind: "success", message: "Tipo de bebida eliminado" });
     void refreshDashboard();
   }
 
   async function refreshDashboard() {
-    const [nextUser, nextRanking, nextLogs, nextBeerTypes] = await Promise.all([
+    const [nextUser, nextBeerTypes, nextDashboard] = await Promise.all([
       getCurrentUser(),
-      getRanking(),
-      getBeerLogs(0),
       getBeerTypes(),
+      selectedEventId ? loadEvent(selectedEventId) : Promise.resolve(null),
     ]);
     setUser(nextUser);
-    setRanking(nextRanking);
-    setLogs(nextLogs);
     setBeerTypes(nextBeerTypes);
+    setDashboard(nextDashboard);
+    if (nextDashboard) {
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === nextDashboard.event.id ? nextDashboard.event : event,
+        ),
+      );
+    }
   }
 
-  const currentPosition = ranking.find((entry) => entry.userId === user.id)?.position;
+  const currentEntry = dashboard?.ranking.find(
+    (entry) => entry.userId === user.id,
+  );
+  const eventUser = {
+    ...user,
+    beerCount: currentEntry?.beerCount ?? 0,
+  };
+  const visibleEvents =
+    statusClock === null
+      ? events
+      : events.map((event) => ({
+          ...event,
+          status: statusAt(event, statusClock),
+        }));
+  const selectedEventStatus = dashboard
+    ? statusClock === null
+      ? dashboard.event.status
+      : statusAt(dashboard.event, statusClock)
+    : null;
 
   return (
     <div className="min-h-dvh dashboard-background">
       <AppHeader
         activePage="counter"
-        onManageBeerTypes={user.role === "ADMIN" ? () => setIsBeerTypesOpen(true) : undefined}
-        onOpenAdmin={user.role === "ADMIN" ? () => setIsAdminOpen(true) : undefined}
+        eventId={selectedEventId || undefined}
+        onManageBeerTypes={() => setIsBeerTypesOpen(true)}
+        onOpenAdmin={
+          user.role === "ADMIN" ? () => setIsAdminOpen(true) : undefined
+        }
         username={user.username}
       />
 
       <main className="mx-auto max-w-7xl space-y-5 px-5 py-6 sm:px-8 sm:py-8">
-        <BeerCounter
-          beerTypes={beerTypes}
-          isAdding={isAdding}
-          onAddBeer={() => void handleAddBeer()}
-          onBeerTypeChange={setSelectedBeerTypeId}
-          canManageBeerTypes={user.role === "ADMIN"}
-          onManageBeerTypes={() => setIsBeerTypesOpen(true)}
-          position={currentPosition}
-          selectedBeerTypeId={selectedBeerTypeId}
-          user={user}
+        <EventSelector
+          events={visibleEvents}
+          onChange={(eventId) => void handleEventChange(eventId)}
+          selectedEventId={selectedEventId}
         />
 
-        <div className="grid items-start gap-5 lg:grid-cols-2">
-          <Ranking currentUserId={user.id} entries={ranking} />
-          <ActivityFeed
-            isLoading={isLoadingLogs}
-            logs={logs}
-            onPageChange={(page) => void handlePageChange(page)}
-          />
-        </div>
+        {isLoadingEvent ? (
+          <Card
+            aria-live="polite"
+            className="grid min-h-80 place-items-center p-6"
+            role="status"
+          >
+            <span className="flex items-center gap-3 font-bold text-muted-foreground">
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-5 animate-spin"
+              />
+              Cargando el evento…
+            </span>
+          </Card>
+        ) : dashboard ? (
+          <>
+            <BeerCounter
+              beerTypes={beerTypes}
+              eventName={dashboard.event.name}
+              eventStatus={selectedEventStatus ?? dashboard.event.status}
+              isAdding={isAdding}
+              onAddBeer={() => void handleAddBeer()}
+              onBeerTypeChange={setSelectedBeerTypeId}
+              onManageBeerTypes={() => setIsBeerTypesOpen(true)}
+              position={currentEntry?.position}
+              selectedBeerTypeId={selectedBeerTypeId}
+              user={eventUser}
+            />
+
+            <div className="grid items-start gap-5 lg:grid-cols-2">
+              <Ranking
+                currentUserId={user.id}
+                description="Solo incluye las consumiciones de esta quedada."
+                entries={dashboard.ranking}
+                title="Ranking del evento"
+              />
+              <ActivityFeed
+                isLoading={isLoadingLogs}
+                logs={dashboard.recentLogs}
+                onPageChange={(page) => void handlePageChange(page)}
+              />
+            </div>
+          </>
+        ) : (
+          <Card className="grid min-h-80 place-items-center border-dashed p-6 text-center">
+            <div className="max-w-md">
+              <CalendarPlus
+                aria-hidden="true"
+                className="mx-auto size-10 text-primary"
+              />
+              <h1 className="mt-4 font-display text-2xl font-black">
+                Necesitas un evento para empezar
+              </h1>
+              <p className="mt-2 leading-6 text-muted-foreground">
+                Crea una quedada o únete con un código. Todas las nuevas
+                consumiciones quedarán ligadas al evento que elijas.
+              </p>
+              <Link
+                className={cn(buttonVariants(), "mt-5")}
+                href="/events"
+              >
+                Gestionar eventos
+              </Link>
+            </div>
+          </Card>
+        )}
       </main>
 
       <footer className="mx-auto max-w-7xl px-5 pb-8 pt-3 text-center text-xs text-muted-foreground sm:px-8">
-        Cervecerdas lleva la cuenta; tú marcas el ritmo. Disfruta con responsabilidad.
+        Cada evento tiene su propio ritmo. Disfruta con responsabilidad.
       </footer>
 
       <BeerTypesDialog
         beerTypes={beerTypes}
+        canDelete={user.role === "ADMIN"}
         isOpen={isBeerTypesOpen}
         onClose={() => setIsBeerTypesOpen(false)}
         onCreated={handleBeerTypeCreated}
@@ -217,9 +365,15 @@ export function Dashboard({
           role={toast.kind === "error" ? "alert" : "status"}
         >
           {toast.kind === "success" ? (
-            <CheckCircle2 aria-hidden="true" className="size-5 shrink-0" />
+            <CheckCircle2
+              aria-hidden="true"
+              className="size-5 shrink-0"
+            />
           ) : (
-            <AlertTriangle aria-hidden="true" className="size-5 shrink-0" />
+            <AlertTriangle
+              aria-hidden="true"
+              className="size-5 shrink-0"
+            />
           )}
           {toast.message}
         </div>

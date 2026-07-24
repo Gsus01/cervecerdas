@@ -1,12 +1,12 @@
 import "server-only";
 
 import { hash } from "bcryptjs";
-import { asc, desc, eq, or } from "drizzle-orm";
+import { asc, eq, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users, type User } from "@/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/http/errors";
-import type { RankingEntryDto, UserDto } from "@/lib/types/api";
+import type { UserDto } from "@/lib/types/api";
 import {
   registrationSchema,
 } from "@/lib/validation/auth";
@@ -98,20 +98,4 @@ export async function getUserById(userId: string): Promise<UserDto> {
   }
 
   return toUserDto(user);
-}
-
-export async function getRanking(): Promise<RankingEntryDto[]> {
-  const rows = await db
-    .select({
-      userId: users.id,
-      username: users.username,
-      beerCount: users.beerCount,
-    })
-    .from(users)
-    .orderBy(desc(users.beerCount), asc(users.username));
-
-  return rows.map((row, index) => ({
-    position: index + 1,
-    ...row,
-  }));
 }

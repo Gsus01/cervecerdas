@@ -2,9 +2,9 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "Cervecerdas API",
-    version: "0.2.0",
+    version: "0.5.0",
     description:
-      "API del MVP Cervecerdas. La autenticación usa una cookie de sesión JWT gestionada por Auth.js.",
+      "API de Cervecerdas para eventos privados, consumiciones y estadísticas personales. La autenticación usa una cookie de sesión JWT gestionada por Auth.js.",
   },
   servers: [{ url: "http://localhost:3000", description: "Entorno local" }],
   tags: [
@@ -12,6 +12,7 @@ export const openApiDocument = {
     { name: "Users" },
     { name: "Beers" },
     { name: "Beer types" },
+    { name: "Events" },
     { name: "Admin" },
     { name: "System" },
   ],
@@ -55,51 +56,6 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/users/ranking": {
-      get: {
-        tags: ["Users"],
-        summary: "Consultar la clasificación general",
-        responses: {
-          "200": {
-            description: "Clasificación ordenada",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/RankingEntry" },
-                },
-              },
-            },
-          },
-          "401": { $ref: "#/components/responses/Unauthorized" },
-        },
-      },
-    },
-    "/api/beers": {
-      post: {
-        tags: ["Beers"],
-        summary: "Registrar una cerveza para el usuario autenticado",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/AddBeerRequest" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "Cerveza registrada",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/BeerAdded" },
-              },
-            },
-          },
-          "401": { $ref: "#/components/responses/Unauthorized" },
-        },
-      },
-    },
     "/api/beer-types": {
       get: {
         tags: ["Beer types"],
@@ -121,7 +77,9 @@ export const openApiDocument = {
       },
       post: {
         tags: ["Beer types"],
-        summary: "Añadir un tipo de cerveza (administrador)",
+        summary: "Añadir un tipo al catálogo compartido",
+        description:
+          "Cualquier usuario autenticado puede crear un tipo, disponible después en todos los eventos.",
         requestBody: {
           required: true,
           content: {
@@ -139,7 +97,6 @@ export const openApiDocument = {
           },
           "400": { $ref: "#/components/responses/BadRequest" },
           "401": { $ref: "#/components/responses/Unauthorized" },
-          "403": { $ref: "#/components/responses/Forbidden" },
           "409": { $ref: "#/components/responses/Conflict" },
         },
       },
@@ -195,33 +152,6 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/beers/logs": {
-      get: {
-        tags: ["Beers"],
-        summary: "Consultar el historial paginado",
-        parameters: [
-          {
-            name: "page",
-            in: "query",
-            schema: { type: "integer", minimum: 0, default: 0 },
-          },
-          {
-            name: "size",
-            in: "query",
-            schema: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Página de eventos",
-            content: {
-              "application/json": { schema: { $ref: "#/components/schemas/BeerLogPage" } },
-            },
-          },
-          "401": { $ref: "#/components/responses/Unauthorized" },
-        },
-      },
-    },
     "/api/beers/statistics": {
       get: {
         tags: ["Beers"],
@@ -248,29 +178,189 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/beers/competition": {
+    "/api/events": {
       get: {
-        tags: ["Beers"],
-        summary: "Comparar la actividad semanal de todos los usuarios",
-        parameters: [
-          {
-            name: "timeZone",
-            in: "query",
-            description: "Zona horaria IANA usada para delimitar los días",
-            schema: { type: "string", default: "UTC", examples: ["Europe/Madrid"] },
-          },
-        ],
+        tags: ["Events"],
+        summary: "Listar los eventos privados del usuario",
         responses: {
           "200": {
-            description: "Clasificación y actividad diaria del grupo",
+            description: "Eventos creados o a los que pertenece",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/GroupCompetition" },
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/EventSummary" },
+                },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Events"],
+        summary: "Crear un evento privado",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateEventRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Evento creado y creador añadido como miembro",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/EventSummary" },
               },
             },
           },
           "400": { $ref: "#/components/responses/BadRequest" },
           "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/api/events/join": {
+      post: {
+        tags: ["Events"],
+        summary: "Unirse a un evento mediante su código privado",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/JoinEventRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Membresía creada o ya existente",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/EventSummary" },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/api/events/{id}": {
+      get: {
+        tags: ["Events"],
+        summary: "Consultar la analítica de un evento privado",
+        description:
+          "Solo los miembros pueden acceder. Los filtros se aplican al ranking, la evolución acumulada, los desgloses, la distribución horaria y la actividad reciente.",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            name: "beerTypeId",
+            in: "query",
+            deprecated: true,
+            description:
+              "Filtro singular conservado por compatibilidad; se puede repetir.",
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            name: "beerTypeIds",
+            in: "query",
+            description:
+              "Hasta 20 UUID separados por comas o repitiendo el parámetro. Si se omite, se incluyen todas las bebidas.",
+            style: "form",
+            explode: false,
+            schema: {
+              type: "array",
+              maxItems: 20,
+              items: { type: "string", format: "uuid" },
+            },
+          },
+          {
+            name: "page",
+            in: "query",
+            description: "Página de la actividad reciente",
+            schema: { type: "integer", minimum: 0, default: 0 },
+          },
+          {
+            name: "size",
+            in: "query",
+            description: "Registros recientes por página",
+            schema: {
+              type: "integer",
+              minimum: 1,
+              maximum: 50,
+              default: 12,
+            },
+          },
+          {
+            name: "timeZone",
+            in: "query",
+            description:
+              "Zona horaria IANA usada en horas y etiquetas de las gráficas",
+            schema: {
+              type: "string",
+              default: "Europe/Madrid",
+              examples: ["Europe/Madrid"],
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description:
+              "Ranking, evolución, desgloses y actividad reciente filtrados",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/EventDashboard" },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/api/events/{id}/beers": {
+      post: {
+        tags: ["Events"],
+        summary: "Registrar una consumición dentro de un evento activo",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AddBeerRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Consumición añadida al total y al evento",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/BeerAdded" },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "404": { $ref: "#/components/responses/NotFound" },
         },
       },
     },
@@ -491,91 +581,203 @@ export const openApiDocument = {
           generatedAt: { type: "string", format: "date-time" },
         },
       },
-      CompetitionUser: {
+      CreateEventRequest: {
+        type: "object",
+        required: ["name", "startsAt", "endsAt"],
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 80 },
+          startsAt: { type: "string", format: "date-time" },
+          endsAt: { type: "string", format: "date-time" },
+        },
+      },
+      JoinEventRequest: {
+        type: "object",
+        required: ["code"],
+        properties: {
+          code: {
+            type: "string",
+            minLength: 10,
+            maxLength: 10,
+            pattern: "^[A-Z0-9]+$",
+          },
+        },
+      },
+      EventSummary: {
         type: "object",
         required: [
-          "position",
-          "userId",
-          "username",
+          "id",
+          "name",
+          "startsAt",
+          "endsAt",
+          "status",
+          "isCreator",
+          "inviteCode",
+          "memberCount",
           "totalBeers",
-          "last7Days",
-          "previous7Days",
-          "trendPercentage",
-          "dailyLast7",
         ],
         properties: {
-          position: { type: "integer", minimum: 1 },
+          id: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          startsAt: { type: "string", format: "date-time" },
+          endsAt: { type: "string", format: "date-time" },
+          status: {
+            type: "string",
+            enum: ["UPCOMING", "ACTIVE", "FINISHED"],
+          },
+          isCreator: { type: "boolean" },
+          inviteCode: {
+            anyOf: [{ type: "string", minLength: 10, maxLength: 10 }, { type: "null" }],
+          },
+          memberCount: { type: "integer", minimum: 1 },
+          totalBeers: {
+            type: "integer",
+            minimum: 0,
+            description: "Total completo del evento, independiente de los filtros",
+          },
+        },
+      },
+      EventTimelinePoint: {
+        type: "object",
+        required: ["key", "label", "startsAt", "endsAt"],
+        properties: {
+          key: { type: "string", format: "date-time" },
+          label: { type: "string" },
+          startsAt: { type: "string", format: "date-time" },
+          endsAt: { type: "string", format: "date-time" },
+        },
+      },
+      EventTimelineSeries: {
+        type: "object",
+        required: ["key", "label", "userId", "values", "total"],
+        properties: {
+          key: { type: "string", format: "uuid" },
+          label: { type: "string" },
+          userId: { type: "string", format: "uuid" },
+          values: {
+            type: "array",
+            description:
+              "Totales acumulados, alineados por posición con los puntos de la timeline",
+            items: { type: "integer", minimum: 0 },
+          },
+          total: { type: "integer", minimum: 0 },
+        },
+      },
+      EventTimeline: {
+        type: "object",
+        required: ["bucketMinutes", "points", "series"],
+        properties: {
+          bucketMinutes: { type: "integer", minimum: 1 },
+          points: {
+            type: "array",
+            minItems: 1,
+            maxItems: 48,
+            items: { $ref: "#/components/schemas/EventTimelinePoint" },
+          },
+          series: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EventTimelineSeries" },
+          },
+        },
+      },
+      EventBeverageTotal: {
+        type: "object",
+        required: [
+          "key",
+          "beerTypeId",
+          "name",
+          "photoDataUrl",
+          "total",
+          "percentage",
+        ],
+        properties: {
+          key: { type: "string" },
+          beerTypeId: {
+            anyOf: [{ type: "string", format: "uuid" }, { type: "null" }],
+          },
+          name: { type: "string" },
+          photoDataUrl: {
+            anyOf: [{ type: "string" }, { type: "null" }],
+          },
+          total: { type: "integer", minimum: 0 },
+          percentage: { type: "integer", minimum: 0, maximum: 100 },
+        },
+      },
+      EventParticipantBreakdown: {
+        type: "object",
+        required: ["userId", "username", "total", "values"],
+        properties: {
           userId: { type: "string", format: "uuid" },
           username: { type: "string" },
-          totalBeers: { type: "integer", minimum: 0 },
-          last7Days: { type: "integer", minimum: 0 },
-          previous7Days: { type: "integer", minimum: 0 },
-          trendPercentage: {
-            anyOf: [{ type: "integer" }, { type: "null" }],
-          },
-          dailyLast7: {
+          total: { type: "integer", minimum: 0 },
+          values: {
             type: "array",
-            items: { $ref: "#/components/schemas/StatisticCount" },
+            description:
+              "Cantidades alineadas por posición con beverageTotals",
+            items: { type: "integer", minimum: 0 },
           },
         },
       },
-      CompetitionBattle: {
+      EventDashboard: {
         type: "object",
         required: [
-          "firstUserId",
-          "firstUsername",
-          "firstCount",
-          "secondUserId",
-          "secondUsername",
-          "secondCount",
-          "difference",
-        ],
-        properties: {
-          firstUserId: { type: "string", format: "uuid" },
-          firstUsername: { type: "string" },
-          firstCount: { type: "integer", minimum: 0 },
-          secondUserId: { type: "string", format: "uuid" },
-          secondUsername: { type: "string" },
-          secondCount: { type: "integer", minimum: 0 },
-          difference: { type: "integer", minimum: 0 },
-        },
-      },
-      GroupCompetition: {
-        type: "object",
-        required: [
-          "totalBeers",
-          "last7Days",
-          "activeUsers",
-          "users",
-          "leader",
-          "closestBattle",
-          "dailyTotals",
+          "event",
+          "ranking",
+          "hourlyConsumption",
+          "timeline",
+          "beverageTotals",
+          "participantBreakdown",
+          "recentLogs",
+          "filteredTotal",
+          "selectedBeerTypeId",
+          "selectedBeerTypeIds",
           "timeZone",
           "generatedAt",
         ],
         properties: {
-          totalBeers: { type: "integer", minimum: 0 },
-          last7Days: { type: "integer", minimum: 0 },
-          activeUsers: { type: "integer", minimum: 0 },
-          users: {
+          event: { $ref: "#/components/schemas/EventSummary" },
+          ranking: {
             type: "array",
-            items: { $ref: "#/components/schemas/CompetitionUser" },
+            description: "Clasificación resultante de los filtros aplicados",
+            items: { $ref: "#/components/schemas/RankingEntry" },
           },
-          leader: {
-            anyOf: [
-              { $ref: "#/components/schemas/CompetitionUser" },
-              { type: "null" },
-            ],
-          },
-          closestBattle: {
-            anyOf: [
-              { $ref: "#/components/schemas/CompetitionBattle" },
-              { type: "null" },
-            ],
-          },
-          dailyTotals: {
+          hourlyConsumption: {
             type: "array",
+            minItems: 24,
+            maxItems: 24,
             items: { $ref: "#/components/schemas/StatisticCount" },
+          },
+          timeline: { $ref: "#/components/schemas/EventTimeline" },
+          beverageTotals: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EventBeverageTotal" },
+          },
+          participantBreakdown: {
+            type: "array",
+            description:
+              "Matriz participante por bebida; cada values se alinea con beverageTotals",
+            items: {
+              $ref: "#/components/schemas/EventParticipantBreakdown",
+            },
+          },
+          recentLogs: {
+            description: "Actividad reciente resultante de los filtros",
+            $ref: "#/components/schemas/BeerLogPage",
+          },
+          filteredTotal: {
+            type: "integer",
+            minimum: 0,
+            description: "Total resultante de los filtros aplicados",
+          },
+          selectedBeerTypeId: {
+            deprecated: true,
+            description: "Primer filtro seleccionado, conservado por compatibilidad",
+            anyOf: [{ type: "string", format: "uuid" }, { type: "null" }],
+          },
+          selectedBeerTypeIds: {
+            type: "array",
+            maxItems: 20,
+            uniqueItems: true,
+            items: { type: "string", format: "uuid" },
           },
           timeZone: { type: "string", examples: ["Europe/Madrid"] },
           generatedAt: { type: "string", format: "date-time" },
@@ -611,7 +813,7 @@ export const openApiDocument = {
         },
       },
       Forbidden: {
-        description: "La cuenta no tiene permisos de administrador",
+        description: "La cuenta no tiene permisos para realizar la operación",
         content: {
           "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
         },

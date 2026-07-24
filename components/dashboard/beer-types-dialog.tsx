@@ -13,6 +13,7 @@ import { MAX_BEER_TYPE_PHOTO_BYTES } from "@/lib/validation/beer";
 
 interface BeerTypesDialogProps {
   beerTypes: BeerTypeDto[];
+  canDelete: boolean;
   isOpen: boolean;
   onClose: () => void;
   onCreated: (beerType: BeerTypeDto) => void;
@@ -24,11 +25,12 @@ const acceptedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 function messageFromError(error: unknown): string {
   return error instanceof ApiClientError
     ? error.message
-    : "No se ha podido guardar el tipo de cerveza";
+    : "No se ha podido guardar el tipo de bebida";
 }
 
 export function BeerTypesDialog({
   beerTypes,
+  canDelete,
   isOpen,
   onClose,
   onCreated,
@@ -167,7 +169,7 @@ export function BeerTypesDialog({
   }
 
   async function handleDelete(beerType: BeerTypeDto) {
-    if (!window.confirm(`¿Eliminar el tipo “${beerType.name}”? Los registros conservarán la cantidad, pero mostrarán “tipo eliminado”.`)) {
+    if (!window.confirm(`¿Eliminar el tipo de bebida “${beerType.name}”? Los registros conservarán la cantidad, pero mostrarán “tipo eliminado”.`)) {
       return;
     }
 
@@ -201,17 +203,17 @@ export function BeerTypesDialog({
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
           <div>
             <h2 className="font-display text-xl font-bold" id="beer-types-title">
-              Tipos de cerveza
+              Tipos de bebida
             </h2>
             <p
               className="mt-1 text-sm leading-6 text-muted-foreground"
               id="beer-types-description"
             >
-              Añade los tipos disponibles para poder seleccionarlos al registrar.
+              Añade bebidas al catálogo compartido para poder seleccionarlas al registrar.
             </p>
           </div>
           <Button
-            aria-label="Cerrar tipos de cerveza"
+            aria-label="Cerrar tipos de bebida"
             disabled={isSaving}
             onClick={closeDialog}
             size="sm"
@@ -238,7 +240,7 @@ export function BeerTypesDialog({
                     validateName(event.target.value);
                   }
                 }}
-                placeholder="Ej. IPA"
+                placeholder="Ej. IPA o limonada"
                 ref={nameRef}
                 value={name}
               />
@@ -273,7 +275,7 @@ export function BeerTypesDialog({
             {photoDataUrl ? (
               <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-border bg-muted">
                 <Image
-                  alt="Vista previa del tipo de cerveza"
+                  alt="Vista previa del tipo de bebida"
                   className="object-cover"
                   fill
                   sizes="(max-width: 640px) 100vw, 320px"
@@ -302,7 +304,7 @@ export function BeerTypesDialog({
               ) : (
                 <Plus aria-hidden="true" className="size-4" />
               )}
-              {isSaving ? "Guardando…" : "Añadir tipo"}
+              {isSaving ? "Guardando…" : "Añadir bebida"}
             </Button>
           </form>
 
@@ -331,19 +333,21 @@ export function BeerTypesDialog({
                       />
                     </span>
                     <span className="min-w-0 flex-1 break-words text-sm font-bold">{beerType.name}</span>
-                    <Button
-                      aria-label={`Eliminar tipo ${beerType.name}`}
-                      disabled={Boolean(deletingId) || isSaving}
-                      onClick={() => void handleDelete(beerType)}
-                      size="sm"
-                      variant="destructive"
-                    >
-                      {deletingId === beerType.id ? (
-                        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 aria-hidden="true" className="size-4" />
-                      )}
-                    </Button>
+                    {canDelete ? (
+                      <Button
+                        aria-label={`Eliminar tipo de bebida ${beerType.name}`}
+                        disabled={Boolean(deletingId) || isSaving}
+                        onClick={() => void handleDelete(beerType)}
+                        size="sm"
+                        variant="destructive"
+                      >
+                        {deletingId === beerType.id ? (
+                          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 aria-hidden="true" className="size-4" />
+                        )}
+                      </Button>
+                    ) : null}
                   </li>
                 ))}
               </ul>

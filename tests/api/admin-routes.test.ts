@@ -54,6 +54,19 @@ describe("rutas administrativas", () => {
     expect(getAdminOverviewMock).not.toHaveBeenCalled();
   });
 
+  it("impide a un usuario normal eliminar tipos de bebida", async () => {
+    requireAdminMock.mockRejectedValue(new ForbiddenError());
+
+    const response = await deleteBeerTypeRoute(
+      new Request(`http://localhost/api/beer-types/${beerTypeId}`, {
+        method: "DELETE",
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(deleteBeerTypeMock).not.toHaveBeenCalled();
+  });
+
   it("permite al administrador corregir todos los campos del registro", async () => {
     const input = {
       userId: adminId,
