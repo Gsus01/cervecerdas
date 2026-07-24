@@ -32,8 +32,8 @@ export function ActivityFeed({
     <Card aria-labelledby="activity-title" className="h-full">
       <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
         <div>
-          <CardTitle id="activity-title">Actividad reciente</CardTitle>
-          <CardDescription>Las últimas rondas, en tu hora local.</CardDescription>
+          <CardTitle id="activity-title">Actividad del evento</CardTitle>
+          <CardDescription>Las últimas rondas de esta quedada, en tu hora local.</CardDescription>
         </div>
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted text-primary">
           <History aria-hidden="true" className="size-5" />
@@ -52,7 +52,7 @@ export function ActivityFeed({
               <Beer aria-hidden="true" className="mx-auto size-6 text-muted-foreground" />
               <p className="font-bold">Todavía no hay actividad</p>
               <p className="text-sm text-muted-foreground">
-                La primera cerveza registrada aparecerá aquí.
+                La primera bebida del evento aparecerá aquí.
               </p>
             </div>
           </div>

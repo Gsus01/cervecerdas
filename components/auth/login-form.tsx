@@ -27,6 +27,12 @@ export function LoginForm() {
 
   const registered = searchParams.get("registered") === "1";
   const sessionExpired = searchParams.get("reason") === "expired";
+  const requestedCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl =
+    requestedCallbackUrl?.startsWith("/") &&
+    !requestedCallbackUrl.startsWith("//")
+      ? requestedCallbackUrl
+      : "/home";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,7 +68,7 @@ export function LoginForm() {
         return;
       }
 
-      router.replace("/home");
+      router.replace(callbackUrl);
       router.refresh();
     } catch {
       setErrorMessage("No se ha podido conectar con el servidor");

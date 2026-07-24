@@ -3,31 +3,63 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { CompetitionDashboard } from "@/components/competition/competition-dashboard";
-import { AppHeader } from "@/components/layout/app-header";
 import { authOptions } from "@/lib/auth/options";
+import { getBeerTypes } from "@/lib/services/beer-type-service";
+import {
+  getEventDashboard,
+  getEventsForUser,
+} from "@/lib/services/event-service";
 import { getUserById } from "@/lib/services/user-service";
 
 export const metadata: Metadata = {
-  title: "Competición del grupo",
+  title: "Análisis del evento",
 };
 
-export default async function CompetitionPage() {
+interface CompetitionPageProps {
+  searchParams: Promise<{ eventId?: string }>;
+}
+
+export default async function CompetitionPage({
+  searchParams,
+}: CompetitionPageProps) {
   const session = await getServerSession(authOptions);
   if (!session?.user.id) {
     redirect("/login");
   }
 
-  const user = await getUserById(session.user.id);
+  const [{ eventId }, user, events, beerTypes] = await Promise.all([
+    searchParams,
+    getUserById(session.user.id),
+    getEventsForUser(session.user.id),
+    getBeerTypes(),
+  ]);
+  const selectedEvent =
+    events.find((event) => event.id === eventId) ??
+    events.find((event) => event.status === "ACTIVE") ??
+    [...events]
+      .filter((event) => event.status === "UPCOMING")
+      .sort(
+        (first, second) =>
+          new Date(first.startsAt).getTime() -
+          new Date(second.startsAt).getTime(),
+      )[0] ??
+    events[0] ??
+    null;
+  const dashboard = selectedEvent
+    ? await getEventDashboard(
+        selectedEvent.id,
+        session.user.id,
+        "Europe/Madrid",
+      )
+    : null;
 
   return (
-    <div className="min-h-dvh dashboard-background">
-      <AppHeader activePage="competition" username={user.username} />
-      <main className="mx-auto max-w-7xl px-5 py-6 sm:px-8 sm:py-8">
-        <CompetitionDashboard currentUserId={user.id} username={user.username} />
-      </main>
-      <footer className="mx-auto max-w-7xl px-5 pb-8 pt-3 text-center text-xs text-muted-foreground sm:px-8">
-        Comparad el historial, no la resistencia. Disfrutad con responsabilidad.
-      </footer>
-    </div>
+    <CompetitionDashboard
+      beerTypes={beerTypes}
+      currentUserId={user.id}
+      events={events}
+      initialDashboard={dashboard}
+      username={user.username}
+    />
   );
 }

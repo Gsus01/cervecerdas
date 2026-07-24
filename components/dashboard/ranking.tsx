@@ -13,15 +13,22 @@ import { cn } from "@/lib/utils";
 interface RankingProps {
   entries: RankingEntryDto[];
   currentUserId: string;
+  title?: string;
+  description?: string;
 }
 
-export function Ranking({ entries, currentUserId }: RankingProps) {
+export function Ranking({
+  entries,
+  currentUserId,
+  title = "Clasificación general",
+  description = "Quién lleva más bebidas registradas.",
+}: RankingProps) {
   return (
     <Card aria-labelledby="ranking-title" className="h-full">
       <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
         <div>
-          <CardTitle id="ranking-title">Clasificación general</CardTitle>
-          <CardDescription>Quién lleva más cervezas registradas.</CardDescription>
+          <CardTitle id="ranking-title">{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </div>
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent/35 text-primary">
           <Trophy aria-hidden="true" className="size-5" />
@@ -40,7 +47,7 @@ export function Ranking({ entries, currentUserId }: RankingProps) {
           <div className="overflow-hidden rounded-lg border border-border">
             <table className="w-full table-fixed border-collapse text-sm">
               <caption className="sr-only">
-                Clasificación de usuarios por cervezas registradas
+                Clasificación de usuarios por bebidas registradas
               </caption>
               <thead className="bg-muted/70 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>

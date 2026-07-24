@@ -3,7 +3,7 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { BeerTypeDto, UserDto } from "@/lib/types/api";
+import type { BeerTypeDto, EventStatus, UserDto } from "@/lib/types/api";
 
 interface BeerCounterProps {
   user: UserDto;
@@ -14,7 +14,8 @@ interface BeerCounterProps {
   selectedBeerTypeId: string;
   onBeerTypeChange: (beerTypeId: string) => void;
   onManageBeerTypes: () => void;
-  canManageBeerTypes: boolean;
+  eventName: string;
+  eventStatus: EventStatus;
 }
 
 export function BeerCounter({
@@ -26,7 +27,8 @@ export function BeerCounter({
   selectedBeerTypeId,
   onBeerTypeChange,
   onManageBeerTypes,
-  canManageBeerTypes,
+  eventName,
+  eventStatus,
 }: BeerCounterProps) {
   const selectedBeerType = beerTypes.find(
     (beerType) => beerType.id === selectedBeerTypeId,
@@ -40,10 +42,13 @@ export function BeerCounter({
       <div className="flex h-full flex-col p-6 sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-white/65">Tu contador</p>
+            <p className="text-sm font-bold text-white/65">Tu contador en</p>
             <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-              Hola, {user.username}
+              {eventName}
             </h1>
+            <p className="mt-1 text-sm font-semibold text-white/55">
+              {user.username}, esta cuenta solo pertenece a esta quedada.
+            </p>
           </div>
           <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-white/10 text-accent">
             <Beer aria-hidden="true" className="size-6" strokeWidth={2.2} />
@@ -52,25 +57,27 @@ export function BeerCounter({
 
         <div className="mt-7 flex items-end gap-3">
           <output
-            aria-label={`${user.beerCount} ${user.beerCount === 1 ? "cerveza registrada" : "cervezas registradas"}`}
+            aria-label={`${user.beerCount} ${user.beerCount === 1 ? "consumición registrada" : "consumiciones registradas"} en ${eventName}`}
             className="font-display text-7xl font-black leading-none tracking-[-0.06em] text-white tabular-nums sm:text-8xl"
           >
             {user.beerCount}
           </output>
           <span className="pb-2 text-sm font-bold text-white/60">
-            {user.beerCount === 1 ? "cerveza" : "cervezas"}
+            {user.beerCount === 1 ? "consumición" : "consumiciones"}
           </span>
         </div>
 
         <div className="mt-auto pt-8">
           <div className="flex min-h-11 items-center gap-2 text-sm text-white/70">
             <TrendingUp aria-hidden="true" className="size-4 text-accent" />
-            {position ? `Puesto ${position} en la clasificación` : "Calculando tu puesto"}
+            {position
+              ? `Puesto ${position} en el ranking del evento`
+              : "Sin consumiciones en este evento"}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-white" htmlFor="beer-type-select">
-                Tipo de cerveza
+                Tipo de bebida
               </label>
               <div className="flex gap-2">
                 {selectedBeerType ? (
@@ -87,7 +94,11 @@ export function BeerCounter({
                 ) : null}
                 <select
                   className="h-14 min-w-0 flex-1 rounded-xl border border-white/25 bg-white/10 px-3 text-base font-bold text-white shadow-sm outline-none transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={beerTypes.length === 0 || isAdding}
+                  disabled={
+                    beerTypes.length === 0 ||
+                    isAdding ||
+                    eventStatus !== "ACTIVE"
+                  }
                   id="beer-type-select"
                   onChange={(event) => onBeerTypeChange(event.target.value)}
                   value={selectedBeerTypeId}
@@ -102,24 +113,30 @@ export function BeerCounter({
                   ))}
                 </select>
               </div>
-              {beerTypes.length === 0 && canManageBeerTypes ? (
+              {beerTypes.length === 0 ? (
                 <button
                   className="min-h-11 text-left text-sm font-bold text-accent underline decoration-accent/50 underline-offset-4 hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   onClick={onManageBeerTypes}
                   type="button"
                 >
-                  Añade un tipo para poder registrar
+                  Añade un tipo al catálogo compartido
                 </button>
-              ) : beerTypes.length === 0 ? (
+              ) : eventStatus !== "ACTIVE" ? (
                 <p className="min-h-11 pt-2 text-sm font-bold text-white/70">
-                  Un administrador debe añadir un tipo de bebida.
+                  {eventStatus === "UPCOMING"
+                    ? "Podrás registrar cuando empiece el evento."
+                    : "Este evento ha finalizado y ya no admite registros."}
                 </p>
               ) : null}
             </div>
             <Button
               aria-busy={isAdding}
               className="bg-accent text-accent-foreground shadow-lg shadow-black/15 hover:bg-accent/90 sm:min-w-52"
-              disabled={isAdding || !selectedBeerTypeId}
+              disabled={
+                isAdding ||
+                !selectedBeerTypeId ||
+                eventStatus !== "ACTIVE"
+              }
               onClick={onAddBeer}
               size="lg"
             >
@@ -128,7 +145,7 @@ export function BeerCounter({
               ) : (
                 <Plus aria-hidden="true" className="size-5" strokeWidth={3} />
               )}
-              {isAdding ? "Registrando…" : "Registrar cerveza"}
+              {isAdding ? "Registrando…" : "Registrar bebida"}
             </Button>
           </div>
         </div>

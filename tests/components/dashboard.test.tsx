@@ -3,20 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  addBeer: vi.fn(),
-  createBeerType: vi.fn(),
-  getRanking: vi.fn(),
-  getBeerLogs: vi.fn(),
+  addEventBeer: vi.fn(),
+  getEventDashboard: vi.fn(),
+  routerReplace: vi.fn(),
   signOut: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: mocks.routerReplace }),
+}));
 vi.mock("next-auth/react", () => ({ signOut: mocks.signOut }));
 vi.mock("@/lib/http/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/http/api-client")>()),
-  addBeer: mocks.addBeer,
-  createBeerType: mocks.createBeerType,
-  getRanking: mocks.getRanking,
-  getBeerLogs: mocks.getBeerLogs,
+  addEventBeer: mocks.addEventBeer,
+  getEventDashboard: mocks.getEventDashboard,
 }));
 
 import { Dashboard } from "@/components/dashboard/dashboard";
@@ -24,8 +24,8 @@ import { ApiClientError } from "@/lib/http/api-client";
 import type {
   BeerLogDto,
   BeerTypeDto,
-  PageDto,
-  RankingEntryDto,
+  EventDashboardDto,
+  EventSummaryDto,
   UserDto,
 } from "@/lib/types/api";
 
@@ -33,20 +33,21 @@ const user: UserDto = {
   id: "4ddde027-2e19-49f6-a213-a93360e8b1fb",
   username: "Carlos",
   email: "carlos@example.com",
-  role: "ADMIN",
-  beerCount: 3,
+  role: "USER",
+  beerCount: 12,
   createdAt: "2026-07-17T18:00:00.000Z",
   updatedAt: "2026-07-17T18:00:00.000Z",
 };
-const ranking: RankingEntryDto[] = [
-  { position: 1, userId: user.id, username: "Carlos", beerCount: 3 },
-];
-const logs: PageDto<BeerLogDto> = {
-  content: [],
-  page: 0,
-  size: 20,
-  totalElements: 0,
-  totalPages: 0,
+const event: EventSummaryDto = {
+  id: "1f4fab65-487c-43f2-9a26-41834ca950d9",
+  name: "Driebes 18/07",
+  startsAt: "2020-01-01T00:00:00.000Z",
+  endsAt: "2099-01-01T00:00:00.000Z",
+  status: "ACTIVE",
+  isCreator: true,
+  inviteCode: "ABC123DEFG",
+  memberCount: 2,
+  totalBeers: 5,
 };
 const beerType: BeerTypeDto = {
   id: "bf0dc4e4-1797-4ef8-9149-fe74d2ac1642",
@@ -54,13 +55,45 @@ const beerType: BeerTypeDto = {
   photoDataUrl: "data:image/png;base64,aW1hZ2Vu",
   createdAt: "2026-07-17T18:30:00.000Z",
 };
+const initialDashboard: EventDashboardDto = {
+  event,
+  ranking: [
+    { position: 1, userId: user.id, username: "Carlos", beerCount: 3 },
+    {
+      position: 2,
+      userId: "56c42ff8-da51-4ea4-a8f9-e6b9db85015b",
+      username: "Lucía",
+      beerCount: 2,
+    },
+  ],
+  hourlyConsumption: [],
+  timeline: {
+    bucketMinutes: 60,
+    points: [],
+    series: [],
+  },
+  beverageTotals: [],
+  participantBreakdown: [],
+  recentLogs: {
+    content: [],
+    page: 0,
+    size: 12,
+    totalElements: 0,
+    totalPages: 0,
+  },
+  filteredTotal: 5,
+  selectedBeerTypeId: null,
+  selectedBeerTypeIds: [],
+  timeZone: "Europe/Madrid",
+  generatedAt: "2026-07-18T20:00:00.000Z",
+};
 
-function renderDashboard(initialBeerTypes: BeerTypeDto[] = [beerType]) {
+function renderDashboard(dashboard: EventDashboardDto = initialDashboard) {
   return render(
     <Dashboard
-      initialBeerTypes={initialBeerTypes}
-      initialLogs={logs}
-      initialRanking={ranking}
+      initialBeerTypes={[beerType]}
+      initialDashboard={dashboard}
+      initialEvents={[dashboard.event]}
       initialUser={user}
     />,
   );
@@ -68,99 +101,158 @@ function renderDashboard(initialBeerTypes: BeerTypeDto[] = [beerType]) {
 
 describe("Dashboard", () => {
   beforeEach(() => {
-    mocks.addBeer.mockReset();
-    mocks.createBeerType.mockReset();
-    mocks.getRanking.mockReset();
-    mocks.getBeerLogs.mockReset();
+    mocks.addEventBeer.mockReset();
+    mocks.getEventDashboard.mockReset();
+    mocks.routerReplace.mockReset();
     mocks.signOut.mockReset();
   });
 
-  it("renderiza el contador actual", () => {
+  it("renderiza el contador ligado al evento seleccionado", () => {
     renderDashboard();
 
-    expect(screen.getByLabelText("3 cervezas registradas")).toBeVisible();
-    expect(screen.getByText("Hola, Carlos")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Estadísticas" })).toHaveAttribute(
-      "href",
-      "/statistics",
-    );
-    expect(screen.getByRole("link", { name: "Grupo" })).toHaveAttribute(
-      "href",
-      "/competition",
-    );
+    expect(
+      screen.getByRole("combobox", { name: "Evento" }),
+    ).toHaveValue(event.id);
+    expect(
+      screen.getByRole("heading", { level: 1, name: event.name }),
+    ).toBeVisible();
+    expect(
+      screen.getByLabelText(
+        `3 consumiciones registradas en ${event.name}`,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Ranking del evento" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Actividad del evento" }),
+    ).toBeVisible();
   });
 
-  it("registra una cerveza y actualiza el contador sin recargar", async () => {
+  it("registra una bebida en el evento y refresca su dashboard", async () => {
     const browserUser = userEvent.setup();
     const newLog: BeerLogDto = {
       id: "df32cc9b-bb38-4f40-aee4-953f92795f8c",
       userId: user.id,
-      username: "Carlos",
+      username: user.username,
       actionType: "BEER_ADDED",
       quantity: 1,
       beerType,
-      createdAt: "2026-07-17T19:35:00.000Z",
+      createdAt: "2026-07-18T20:05:00.000Z",
     };
-    mocks.addBeer.mockResolvedValue({ beerCount: 4, log: newLog });
-    mocks.getRanking.mockResolvedValue([
-      { position: 1, userId: user.id, username: "Carlos", beerCount: 4 },
-    ]);
-    mocks.getBeerLogs.mockResolvedValue({
-      ...logs,
-      content: [newLog],
-      totalElements: 1,
-      totalPages: 1,
-    });
+    const refreshedDashboard: EventDashboardDto = {
+      ...initialDashboard,
+      event: { ...event, totalBeers: 6 },
+      ranking: [
+        { position: 1, userId: user.id, username: "Carlos", beerCount: 4 },
+        initialDashboard.ranking[1]!,
+      ],
+      recentLogs: {
+        ...initialDashboard.recentLogs,
+        content: [newLog],
+        totalElements: 1,
+        totalPages: 1,
+      },
+      filteredTotal: 6,
+    };
+    mocks.addEventBeer.mockResolvedValue({ beerCount: 4, log: newLog });
+    mocks.getEventDashboard.mockResolvedValue(refreshedDashboard);
     renderDashboard();
 
-    await browserUser.selectOptions(screen.getByLabelText("Tipo de cerveza"), beerType.id);
-    await browserUser.click(screen.getByRole("button", { name: "Registrar cerveza" }));
+    await browserUser.selectOptions(
+      screen.getByRole("combobox", { name: "Tipo de bebida" }),
+      beerType.id,
+    );
+    await browserUser.click(
+      screen.getByRole("button", { name: "Registrar bebida" }),
+    );
 
-    expect(await screen.findByLabelText("4 cervezas registradas")).toBeVisible();
-    expect(screen.getByText("Cerveza registrada. ¡Salud!")).toBeVisible();
-    expect(mocks.addBeer).toHaveBeenCalledWith(beerType.id);
+    expect(
+      await screen.findByLabelText(
+        `4 consumiciones registradas en ${event.name}`,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Bebida registrada en este evento. ¡Salud!"),
+    ).toBeVisible();
+    expect(mocks.addEventBeer).toHaveBeenCalledOnce();
+    expect(mocks.addEventBeer).toHaveBeenCalledWith(event.id, beerType.id);
+    expect(mocks.getEventDashboard).toHaveBeenCalledOnce();
+    expect(mocks.getEventDashboard).toHaveBeenCalledWith(
+      event.id,
+      expect.any(String),
+      [],
+      0,
+    );
   });
 
-  it("mantiene el contador y muestra el error de la API", async () => {
+  it("mantiene el contador y anuncia el error de registro", async () => {
     const browserUser = userEvent.setup();
-    mocks.addBeer.mockRejectedValue(
-      new ApiClientError(500, {
-        timestamp: "2026-07-17T19:35:00.000Z",
-        status: 500,
-        error: "Internal server error",
-        message: "No se ha podido registrar la cerveza",
-        path: "/api/beers",
+    mocks.addEventBeer.mockRejectedValue(
+      new ApiClientError(409, {
+        timestamp: "2026-07-18T20:05:00.000Z",
+        status: 409,
+        error: "Conflict",
+        message: "El evento ya ha finalizado",
+        path: `/api/events/${event.id}/beers`,
       }),
     );
     renderDashboard();
 
-    await browserUser.selectOptions(screen.getByLabelText("Tipo de cerveza"), beerType.id);
-    await browserUser.click(screen.getByRole("button", { name: "Registrar cerveza" }));
+    await browserUser.selectOptions(
+      screen.getByRole("combobox", { name: "Tipo de bebida" }),
+      beerType.id,
+    );
+    await browserUser.click(
+      screen.getByRole("button", { name: "Registrar bebida" }),
+    );
 
-    expect(await screen.findByText("No se ha podido registrar la cerveza")).toBeVisible();
-    expect(screen.getByLabelText("3 cervezas registradas")).toBeVisible();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "El evento ya ha finalizado",
+    );
+    expect(
+      screen.getByLabelText(
+        `3 consumiciones registradas en ${event.name}`,
+      ),
+    ).toBeVisible();
+    expect(mocks.getEventDashboard).not.toHaveBeenCalled();
   });
 
-  it("añade un tipo desde el menú y lo deja seleccionado", async () => {
-    const browserUser = userEvent.setup();
-    const createdBeerType: BeerTypeDto = { ...beerType, name: "Lager" };
-    mocks.createBeerType.mockResolvedValue(createdBeerType);
-    renderDashboard([]);
+  it.each([
+    {
+      event: {
+        ...event,
+        startsAt: "2099-01-01T12:00:00.000Z",
+        endsAt: "2099-01-01T20:00:00.000Z",
+        status: "UPCOMING" as const,
+      },
+      message: "Podrás registrar cuando empiece el evento.",
+    },
+    {
+      event: {
+        ...event,
+        startsAt: "2020-01-01T12:00:00.000Z",
+        endsAt: "2020-01-01T20:00:00.000Z",
+        status: "FINISHED" as const,
+      },
+      message: "Este evento ha finalizado y ya no admite registros.",
+    },
+  ])(
+    "bloquea el registro cuando el evento está $event.status",
+    ({ event: unavailableEvent, message }) => {
+      renderDashboard({
+        ...initialDashboard,
+        event: unavailableEvent,
+      });
 
-    await browserUser.click(screen.getByRole("button", { name: "Tipos de cerveza" }));
-    await browserUser.type(screen.getByLabelText("Nombre"), "Lager");
-    await browserUser.upload(
-      screen.getByLabelText("Foto"),
-      new File(["imagen"], "lager.png", { type: "image/png" }),
-    );
-    await screen.findByAltText("Vista previa del tipo de cerveza");
-    await browserUser.click(screen.getByRole("button", { name: "Añadir tipo" }));
-
-    expect(mocks.createBeerType).toHaveBeenCalledWith(
-      "Lager",
-      "data:image/png;base64,aW1hZ2Vu",
-    );
-    expect(screen.getByLabelText("Tipo de cerveza")).toHaveValue(beerType.id);
-    expect(screen.getByText("Tipo Lager añadido")).toBeVisible();
-  });
+      expect(
+        screen.getByRole("combobox", { name: "Tipo de bebida" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Registrar bebida" }),
+      ).toBeDisabled();
+      expect(screen.getByText(message)).toBeVisible();
+      expect(mocks.addEventBeer).not.toHaveBeenCalled();
+    },
+  );
 });

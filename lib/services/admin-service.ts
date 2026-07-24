@@ -1,10 +1,16 @@
 import "server-only";
 
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { beerLogs, beerTypes, users } from "@/db/schema";
-import { NotFoundError } from "@/lib/http/errors";
+import {
+  beerLogs,
+  beerTypes,
+  eventMembers,
+  events,
+  users,
+} from "@/db/schema";
+import { BadRequestError, NotFoundError } from "@/lib/http/errors";
 import { getBeerLogs } from "@/lib/services/beer-service";
 import { getAllUsers } from "@/lib/services/user-service";
 import type { AdminOverviewDto } from "@/lib/types/api";
@@ -42,7 +48,7 @@ export async function updateBeerLog(logId: string, input: unknown): Promise<void
 
   await db.transaction(async (transaction) => {
     const [existingLog] = await transaction
-      .select({ userId: beerLogs.userId })
+      .select({ userId: beerLogs.userId, eventId: beerLogs.eventId })
       .from(beerLogs)
       .where(eq(beerLogs.id, logId))
       .limit(1);
@@ -71,13 +77,42 @@ export async function updateBeerLog(logId: string, input: unknown): Promise<void
       throw new NotFoundError("El tipo de bebida seleccionado ya no existe");
     }
 
+    const createdAt = new Date(data.createdAt);
+    if (existingLog.eventId) {
+      const [event] = await transaction
+        .select({
+          startsAt: events.startsAt,
+          endsAt: events.endsAt,
+        })
+        .from(eventMembers)
+        .innerJoin(events, eq(eventMembers.eventId, events.id))
+        .where(
+          and(
+            eq(eventMembers.eventId, existingLog.eventId),
+            eq(eventMembers.userId, data.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!event) {
+        throw new BadRequestError(
+          "El usuario seleccionado no forma parte del evento",
+        );
+      }
+      if (createdAt < event.startsAt || createdAt >= event.endsAt) {
+        throw new BadRequestError(
+          "La fecha debe estar dentro de la duración del evento",
+        );
+      }
+    }
+
     await transaction
       .update(beerLogs)
       .set({
         userId: data.userId,
         beerTypeId: data.beerTypeId,
         quantity: data.quantity,
-        createdAt: new Date(data.createdAt),
+        createdAt,
       })
       .where(eq(beerLogs.id, logId));
 

@@ -12,19 +12,25 @@ export const metadata: Metadata = { title: "Documentación API" };
 const endpoints = [
   ["POST", "/api/auth/register", "Crear una cuenta"],
   ["GET", "/api/users/me", "Usuario autenticado"],
-  ["GET", "/api/users/ranking", "Clasificación general"],
-  ["POST", "/api/beers", "Registrar una cerveza"],
-  ["GET", "/api/beers/logs?page=0&size=20", "Historial paginado"],
+  [
+    "GET / POST",
+    "/api/beer-types",
+    "Listar tipos o añadir uno al catálogo compartido",
+  ],
+  ["DELETE", "/api/beer-types/:id", "Eliminar un tipo (solo ADMIN)"],
   [
     "GET",
     "/api/beers/statistics?timeZone=Europe%2FMadrid",
     "Estadísticas personales",
   ],
+  ["GET / POST", "/api/events", "Listar o crear eventos privados"],
+  ["POST", "/api/events/join", "Unirse mediante un código"],
   [
     "GET",
-    "/api/beers/competition?timeZone=Europe%2FMadrid",
-    "Comparación semanal del grupo",
+    "/api/events/:id?timeZone=Europe%2FMadrid&beerTypeIds=...,...&page=0&size=12",
+    "Ranking, comparativas y actividad reciente del evento",
   ],
+  ["POST", "/api/events/:id/beers", "Registrar durante un evento en curso"],
 ] as const;
 
 export default function ApiDocsPage() {

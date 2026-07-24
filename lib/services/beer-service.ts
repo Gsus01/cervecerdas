@@ -1,15 +1,16 @@
 import "server-only";
 
-import { count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { beerLogs, beerTypes, users } from "@/db/schema";
-import { NotFoundError } from "@/lib/http/errors";
+import { beerLogs, beerTypes, eventMembers, events, users } from "@/db/schema";
+import { BadRequestError, ForbiddenError, NotFoundError } from "@/lib/http/errors";
 import type { BeerAddedDto, BeerLogDto, PageDto } from "@/lib/types/api";
 
 export async function addBeerForUser(
   userId: string,
   beerTypeId: string,
+  eventId: string,
 ): Promise<BeerAddedDto> {
   return db.transaction(async (transaction) => {
     const now = new Date();
@@ -21,6 +22,32 @@ export async function addBeerForUser(
 
     if (!beerType) {
       throw new NotFoundError("El tipo de cerveza seleccionado ya no existe");
+    }
+
+    const [event] = await transaction
+      .select({
+        startsAt: events.startsAt,
+        endsAt: events.endsAt,
+      })
+      .from(eventMembers)
+      .innerJoin(events, eq(eventMembers.eventId, events.id))
+      .where(
+        and(
+          eq(eventMembers.eventId, eventId),
+          eq(eventMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new ForbiddenError("No formas parte de este evento");
+    }
+    if (now < event.startsAt || now >= event.endsAt) {
+      throw new BadRequestError(
+        now < event.startsAt
+          ? "El evento todavía no ha comenzado"
+          : "El evento ya ha finalizado",
+      );
     }
 
     const [updatedUser] = await transaction
@@ -45,6 +72,7 @@ export async function addBeerForUser(
       .values({
         userId,
         beerTypeId,
+        eventId,
         actionType: "BEER_ADDED",
         quantity: 1,
         createdAt: now,

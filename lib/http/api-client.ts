@@ -4,16 +4,15 @@ import type {
   ApiErrorDto,
   AdminOverviewDto,
   BeerAddedDto,
-  BeerLogDto,
   BeerStatisticsDto,
   BeerTypeDto,
-  GroupCompetitionDto,
-  PageDto,
-  RankingEntryDto,
+  EventDashboardDto,
+  EventSummaryDto,
   UserDto,
   UpdateBeerLogInput,
 } from "@/lib/types/api";
 import type { RegistrationInput } from "@/lib/validation/auth";
+import type { CreateEventInput } from "@/lib/validation/event";
 
 export class ApiClientError extends Error {
   constructor(
@@ -103,17 +102,6 @@ export function getCurrentUser(): Promise<UserDto> {
   return request<UserDto>("/api/users/me");
 }
 
-export function getRanking(): Promise<RankingEntryDto[]> {
-  return request<RankingEntryDto[]>("/api/users/ranking");
-}
-
-export function addBeer(beerTypeId: string): Promise<BeerAddedDto> {
-  return request<BeerAddedDto>("/api/beers", {
-    method: "POST",
-    body: JSON.stringify({ beerTypeId }),
-  });
-}
-
 export function getBeerTypes(): Promise<BeerTypeDto[]> {
   return request<BeerTypeDto[]>("/api/beer-types");
 }
@@ -126,10 +114,6 @@ export function createBeerType(
     method: "POST",
     body: JSON.stringify({ name, photoDataUrl }),
   });
-}
-
-export function getBeerLogs(page = 0, size = 20): Promise<PageDto<BeerLogDto>> {
-  return request<PageDto<BeerLogDto>>(`/api/beers/logs?page=${page}&size=${size}`);
 }
 
 export function deleteBeerType(beerTypeId: string): Promise<{ success: true }> {
@@ -164,8 +148,48 @@ export function getBeerStatistics(timeZone: string): Promise<BeerStatisticsDto> 
   );
 }
 
-export function getGroupCompetition(timeZone: string): Promise<GroupCompetitionDto> {
-  return request<GroupCompetitionDto>(
-    `/api/beers/competition?timeZone=${encodeURIComponent(timeZone)}`,
-  );
+export function getEvents(): Promise<EventSummaryDto[]> {
+  return request<EventSummaryDto[]>("/api/events");
+}
+
+export function createEvent(input: CreateEventInput): Promise<EventSummaryDto> {
+  return request<EventSummaryDto>("/api/events", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function joinEvent(code: string): Promise<EventSummaryDto> {
+  return request<EventSummaryDto>("/api/events/join", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export function getEventDashboard(
+  eventId: string,
+  timeZone: string,
+  beerTypeIds: string[] = [],
+  page = 0,
+  size = 12,
+): Promise<EventDashboardDto> {
+  const query = new URLSearchParams({
+    timeZone,
+    page: String(page),
+    size: String(size),
+  });
+  if (beerTypeIds.length > 0) {
+    query.set("beerTypeIds", beerTypeIds.join(","));
+  }
+  return request<EventDashboardDto>(`/api/events/${eventId}?${query}`);
+}
+
+export function addEventBeer(
+  eventId: string,
+  beerTypeId: string,
+): Promise<BeerAddedDto> {
+  return request<BeerAddedDto>(`/api/events/${eventId}/beers`, {
+    method: "POST",
+    body: JSON.stringify({ beerTypeId }),
+  });
 }
